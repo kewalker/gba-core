@@ -1,0 +1,46 @@
+[
+  {
+    "path": "Cores/BitBird.GBA/audio.json",
+    "sha256": "be05e851fb4cf341481c38b4d0ca7006c049b66a712281fab0e70d1b4eef267d"
+  },
+  {
+    "path": "Cores/BitBird.GBA/bitstream.rbf_r",
+    "sha256": "96ff681ddfc88d984b2a8a9453411776d69d4cf61a2329a7f4a82932b8c951b5"
+  },
+  {
+    "path": "Cores/BitBird.GBA/core.json",
+    "sha256": "14984f9352cdc26ae1d8f4fa9e542a6b74923086308c8c3f5700b05401e2c1c8"
+  },
+  {
+    "path": "Cores/BitBird.GBA/data.json",
+    "sha256": "8b74f058a8bf0710ed156d07e0edec86e8e0474507a0753d4d909f4242092a43"
+  },
+  {
+    "path": "Cores/BitBird.GBA/icon.bin",
+    "sha256": "2086d68e73fabdbe51ac98bdbcf65b85b814ce92ab8718a7927c81e9b3ddc05c"
+  },
+  {
+    "path": "Cores/BitBird.GBA/input.json",
+    "sha256": "e0c5db45e264d3e5e035fe1380a0ef788e1ec562e5cbe869576899977ac2fbd4"
+  },
+  {
+    "path": "Cores/BitBird.GBA/interact.json",
+    "sha256": "814656d658b6c2df110d71859b15175a8402c257089f0fcb7b4ea76c5fe13884"
+  },
+  {
+    "path": "Cores/BitBird.GBA/variants.json",
+    "sha256": "738f510d58f63d7faf6c24a7c80a566b02fc6314611aece35895bf426bff9ec5"
+  },
+  {
+    "path": "Cores/BitBird.GBA/video.json",
+    "sha256": "5b4296030dc76484038999f902c05a8f568a37b3074b636d6cbf7c9a4cdb5ba2"
+  },
+  {
+    "path": "Platforms/gba.json",
+    "sha256": "5dbd03bec894d749ab5ac49692177090ff36380cff3f3783ccc35c78287992dd"
+  },
+  {
+    "path": "README.md",
+    "sha256": "d98c5c9db700288a62fa375c8a6c4d465efdf23646039b27a77fc93dd39601dc"
+  }
+]

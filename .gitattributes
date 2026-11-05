@@ -1,0 +1,9 @@
+* -text
+*.md text eol=lf
+*.ps1 text eol=lf
+*.json -text
+*.zip binary
+*.bin binary
+*.rbf_r binary
+
+pocket/** -text

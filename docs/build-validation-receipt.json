@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "scope": "Exported QSF/QIP/RTL inputs match the qualified installed candidate byte for byte. This updated release checkout has not been independently recompiled.",
+  "image_sha256": "96ff681ddfc88d984b2a8a9453411776d69d4cf61a2329a7f4a82932b8c951b5",
+  "image_bytes": 1998356,
+  "timing_minima_ns": {
+    "Setup": 0.023,
+    "Hold": 0.085
+  },
+  "physical_audits": 21,
+  "source_export_exact": true,
+  "standalone_rebuild_of_updated_checkout": false,
+  "hardware_acceptance": {
+    "visual_formatting": true,
+    "day_rollover_tested": false,
+    "exhaustive_compatibility": false
+  }
+}

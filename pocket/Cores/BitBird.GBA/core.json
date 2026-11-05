@@ -1,0 +1,36 @@
+{
+  "core": {
+    "magic": "APF_VER_1",
+    "metadata": {
+      "platform_ids": [
+        "gba"
+      ],
+      "shortname": "GBA",
+      "description": "BitBird GBA: Game Boy Advance compatible openFPGA core.",
+      "author": "BitBird",
+      "url": "https://github.com/kewalker/gba-core",
+      "version": "0.1.0",
+      "date_release": "2026-11-04"
+    },
+    "framework": {
+      "target_product": "Analogue Pocket",
+      "version_required": "1.1",
+      "sleep_supported": true,
+      "dock": {
+        "supported": true,
+        "analog_output": false
+      },
+      "hardware": {
+        "link_port": true,
+        "cartridge_adapter": -1
+      }
+    },
+    "cores": [
+      {
+        "name": "default",
+        "id": 0,
+        "filename": "bitstream.rbf_r"
+      }
+    ]
+  }
+}

@@ -1,0 +1,708 @@
+{
+  "schema": 1,
+  "historical_fit": "playtime-units-fit-20261106-17",
+  "scope": "18 preserved physical stages plus CPU, retained-ROM and validator timing cones; original limits unchanged",
+  "audits": [
+    {
+      "name": "diagnosis",
+      "script": "diagnose-savestate-probe-timing.tcl",
+      "marker": "COMPLETE: fitted save-state prototype setup-path diagnosis"
+    },
+    {
+      "name": "savestate-crossing",
+      "script": "check-savestate-crossing-timing.tcl"
+    },
+    {
+      "name": "savestate-video",
+      "script": "check-savestate-video-timing.tcl"
+    },
+    {
+      "name": "render-path",
+      "script": "check-render-path-timing.tcl"
+    },
+    {
+      "name": "scanline-crossing",
+      "script": "check-scanline-crossing-timing.tcl"
+    },
+    {
+      "name": "text-coordinate",
+      "script": "check-text-coordinate-timing.tcl"
+    },
+    {
+      "name": "color-effects",
+      "script": "check-color-effects-timing.tcl"
+    },
+    {
+      "name": "fast-clock",
+      "script": "check-fast-clock-timing.tcl"
+    },
+    {
+      "name": "audio-crossing",
+      "script": "check-audio-crossing-timing.tcl"
+    },
+    {
+      "name": "sdram",
+      "script": "check-sdram-timing.tcl"
+    },
+    {
+      "name": "rom-bundle",
+      "script": "check-rom-bundle-timing.tcl"
+    },
+    {
+      "name": "external-save",
+      "script": "check-external-save-timing.tcl"
+    },
+    {
+      "name": "mosaic",
+      "script": "check-mosaic-timing.tcl"
+    },
+    {
+      "name": "playtime",
+      "script": "check-playtime-timing.tcl"
+    },
+    {
+      "name": "stop-resync",
+      "script": "check-stop-resync-timing.tcl"
+    },
+    {
+      "name": "rtc-bundle",
+      "script": "check-rtc-bundle-timing.tcl"
+    },
+    {
+      "name": "rtc-persistence",
+      "script": "check-rtc-persistence-timing.tcl"
+    },
+    {
+      "name": "fast-forward",
+      "script": "check-fast-forward-timing.tcl"
+    },
+    {
+      "name": "cpu-overlap-cone",
+      "script": "check-cpu-overlap-timing.tcl",
+      "arguments": [
+        "1"
+      ],
+      "marker": "COMPLETE: CPU saved-operand cone"
+    },
+    {
+      "name": "retained-rom-cone",
+      "script": "check-retained-rom-timing.tcl",
+      "arguments": [],
+      "marker": "COMPLETE: retained-ROM ownership cone"
+    },
+    {
+      "name": "validator-stage-cone",
+      "script": "check-container-stage-timing.tcl",
+      "arguments": [],
+      "marker": "PASS: staged validator control clears setup and hold in four corners"
+    }
+  ],
+  "files": [
+    {
+      "path": "scripts/timing/diagnose-savestate-probe-timing.tcl",
+      "sha256": "150186b52b1ffced8a0e3af08b95d9453b2583743e50ee01f3e9ee4e47ff0f1d"
+    },
+    {
+      "path": "scripts/timing/check-savestate-crossing-timing.tcl",
+      "sha256": "1d74fc70187d3f56defb54dff4c12bf30b0489a0d29046b61316e5d3488581ab"
+    },
+    {
+      "path": "scripts/timing/check-savestate-video-timing.tcl",
+      "sha256": "86614b763a351be30765bed1bb0e771958f1bb751cc94c39d6c9823973ab061e"
+    },
+    {
+      "path": "scripts/timing/check-render-path-timing.tcl",
+      "sha256": "419e7e4355b5b2522023a0ee72a4c7fddfcfed1ec4a44b1dc97a2d0d41ba3563"
+    },
+    {
+      "path": "scripts/timing/check-scanline-crossing-timing.tcl",
+      "sha256": "3f7de0861af52d42a36c2ce483f3a90060d8b9b7c13e1e7d9a300a9dd7b8e896"
+    },
+    {
+      "path": "scripts/timing/check-text-coordinate-timing.tcl",
+      "sha256": "6c26d22d724b7961cebe760457099c463d795ee78737621d84d06161526fb9eb"
+    },
+    {
+      "path": "scripts/timing/check-color-effects-timing.tcl",
+      "sha256": "88d281806e1c11e75b1bb0c9cc31e978812e7a1586985133246fd055313b5981"
+    },
+    {
+      "path": "scripts/timing/check-fast-clock-timing.tcl",
+      "sha256": "8e3640a1d96be8de4b08916b39c64074e3b28e8e89c9cfd659600cad41ba6103"
+    },
+    {
+      "path": "scripts/timing/check-audio-crossing-timing.tcl",
+      "sha256": "9dabb7dd163a33ba7934f8261a862bed2c08a752ce804f6f109c6e4303713e38"
+    },
+    {
+      "path": "scripts/timing/check-sdram-timing.tcl",
+      "sha256": "489ddc68facd7ff971e0ae38c1cacb494ae1540cc5c604d5e78c257c910e057f"
+    },
+    {
+      "path": "scripts/timing/check-rom-bundle-timing.tcl",
+      "sha256": "6e36b1076d13d4caacd1de81ab37e0b6852dfa0dd76259284eac2a2be896a5c4"
+    },
+    {
+      "path": "scripts/timing/check-external-save-timing.tcl",
+      "sha256": "8e017f594b3e6c613537f11ebba84bfe52158abde959915cfd29b6f920379ae7"
+    },
+    {
+      "path": "scripts/timing/check-mosaic-timing.tcl",
+      "sha256": "313e33e99d26299166cf60d141f48e0e52f67b8847640e0bdb50c90a3228b765"
+    },
+    {
+      "path": "scripts/timing/check-playtime-timing.tcl",
+      "sha256": "7e789b1fd9d4d52810929bf8f6f6f371f08144d1dd12aa5004d306f1093f1935"
+    },
+    {
+      "path": "scripts/timing/check-stop-resync-timing.tcl",
+      "sha256": "a7a02349cb7efd2fcdb59cbbe284850fa8c487504adc9e142528124e21aacd8e"
+    },
+    {
+      "path": "scripts/timing/check-rtc-bundle-timing.tcl",
+      "sha256": "01301f9b26dc4c56a1b9d9b7b5876cc1574e6b2a39aa101fc326f640f513228c"
+    },
+    {
+      "path": "scripts/timing/check-rtc-persistence-timing.tcl",
+      "sha256": "b2db4d912a7886694e53ad5af47ff431740d13f5db454f7f951098c25fa7d23e"
+    },
+    {
+      "path": "scripts/timing/check-fast-forward-timing.tcl",
+      "sha256": "7aaa37cf7b9f6a440d0917a415f142bf3982c3af3e5bb950d3fe699e88b39d06"
+    },
+    {
+      "path": "scripts/timing/check-cpu-overlap-timing.tcl",
+      "sha256": "7aba149626c629e6e8ab5cd8217283b9ae12d4fbc0fe47b651c7816b4e1ffe9f"
+    },
+    {
+      "path": "scripts/timing/check-retained-rom-timing.tcl",
+      "sha256": "5179443bf5394344ccf340f4373cb6ea99a5b323060ba28204aa237dd0eba078"
+    },
+    {
+      "path": "scripts/timing/check-container-stage-timing.tcl",
+      "sha256": "4e0ecf2c17853c23560493301221aa42fe4d601c90c0e16eb63e4d91c7e7d5c4"
+    }
+  ],
+  "timing_coverage": [
+    [
+      "Fast 1100mV 0C",
+      "Hold",
+      "bridge_spiclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Hold",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Hold",
+      "sdram_pin_clock"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "bridge_spiclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~FRACTIONAL_PLL|vcoph[0]"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~FRACTIONAL_PLL|vcoph[0]"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Recovery",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Recovery",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Removal",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Removal",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Setup",
+      "bridge_spiclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Setup",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Setup",
+      "n/a"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Setup",
+      "sdram_pin_clock"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Hold",
+      "bridge_spiclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Hold",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Hold",
+      "sdram_pin_clock"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "bridge_spiclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~FRACTIONAL_PLL|vcoph[0]"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~FRACTIONAL_PLL|vcoph[0]"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Recovery",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Recovery",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Removal",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Removal",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Setup",
+      "bridge_spiclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Setup",
+      "clk_74a"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Setup",
+      "n/a"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Setup",
+      "sdram_pin_clock"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Hold",
+      "bridge_spiclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Hold",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Hold",
+      "sdram_pin_clock"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "bridge_spiclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~FRACTIONAL_PLL|vcoph[0]"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~FRACTIONAL_PLL|vcoph[0]"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Minimum Pulse Width",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Recovery",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Recovery",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Removal",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Removal",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Setup",
+      "bridge_spiclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Setup",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Setup",
+      "n/a"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Setup",
+      "sdram_pin_clock"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Hold",
+      "bridge_spiclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Hold",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Hold",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Hold",
+      "sdram_pin_clock"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "bridge_spiclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~FRACTIONAL_PLL|vcoph[0]"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~FRACTIONAL_PLL|vcoph[0]"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Minimum Pulse Width",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Recovery",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Recovery",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Removal",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Removal",
+      "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Setup",
+      "bridge_spiclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Setup",
+      "clk_74a"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Setup",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Setup",
+      "n/a"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Setup",
+      "sdram_pin_clock"
+    ]
+  ]
+}

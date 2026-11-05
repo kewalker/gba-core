@@ -1,0 +1,23 @@
+build/
+output_files/
+db/
+incremental_db/
+__pycache__/
+*.py[cod]
+*.qws
+*.sof
+*.pof
+*.rpt
+*.summary
+*.smsg
+*.jdi
+*.bak
+*.sav
+*.gba
+*.gbkstat
+gba_bios.bin
+
+!pocket/Cores/BitBird.GBA/
+
+# Local historical packages are retained privately, never pushed.
+release-candidate/

@@ -1,0 +1,749 @@
+{
+  "schema": 1,
+  "identity": "BitBird.GBA",
+  "version": "0.1.0",
+  "release_version": {
+    "version": "0.1.0",
+    "tag": "v0.1.0"
+  },
+  "image_sha256": "96ff681ddfc88d984b2a8a9453411776d69d4cf61a2329a7f4a82932b8c951b5",
+  "timing": {
+    "setup_ns": 0.023,
+    "hold_ns": 0.085,
+    "alms": 18074,
+    "physical_audits": 18
+  },
+  "scope": "Exact source/package export of the timing-qualified and visually accepted playtime update. Day rollover was not exercised on hardware; boundaries are simulation-covered.",
+  "files": [
+    {
+      "path": "src/fpga/ap_core.qpf",
+      "sha256": "a911d8909682cd12e9d963a88f106b816f5f737f7008d7ac8f6304de138825c9",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/ap_core.qsf",
+      "sha256": "939701881827d00366a5c94f79b2b2499080c91a0f829f84d5b1d22d773300fa",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/apf.qip",
+      "sha256": "94af53185dde4d51ef30e75bb1ec8df672126742af36399bd62f4efb3a84b26a",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/apf_constraints.sdc",
+      "sha256": "18b72957181178b046c2f27711190cb426482edcd7b58fcda9cfea27e855dd2e",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/apf_top.v",
+      "sha256": "6c24aa45a3dab52d8b86944cdd90330aa74cfdcd62e2d43e39d33d4791d173c7",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/build_id.mif",
+      "sha256": "7b5bfcbb870d9972a9d6c2efba26db23e75630f958771129f2f20c5f753dcbf2",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/build_id.ver",
+      "sha256": "889f0348134439fbbc8a8e710a22fceeb4b0b56a9624996cfa01b1154d050c05",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/build_id_gen.tcl",
+      "sha256": "6279533fec80081e3c91884e1cc5df853b2a716df0b573636147f3420aace996",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/common.v",
+      "sha256": "c1615e2c6c12b111537f6ca11e826e5061eb91f405e349bdc649a17b48e24d4e",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/io_bridge_peripheral.v",
+      "sha256": "fb9c13e0311ac6b01019898d0ca7786f370228380356fe618fc2b473f2add17d",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/io_pad_controller.v",
+      "sha256": "70cda74af63d3baa53f87473e1d9e2d524ea305b299a3f832d6c1292771a305e",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/mf_datatable.qip",
+      "sha256": "8d4fac9c708f86c426e5241055d8000063e16dbe9b5c414f320a8b24c44a0632",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/mf_datatable.v",
+      "sha256": "e2cc2e33ccc22b9a8be3c426141848e0ea7800abb45ce55530eebe17dd23ffd7",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/mf_ddio_bidir_12.qip",
+      "sha256": "f0ed4e73a07d734115bbde6501b43fe5878a7409f9b3b68bb4c7e0424b31b42e",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/apf/mf_ddio_bidir_12.v",
+      "sha256": "31c8b62114d7bc916104a6199d919d9e2235a164aba518360b339867a08426aa",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/core_bridge_cmd.v",
+      "sha256": "a42be90d3e69833d4b0ba957cfe66b204dc5bc02d828160d285d575848070d2d",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/core_constraints.sdc",
+      "sha256": "349fb95588cd4949383931e669e87a309bbd7cabd944f7a7f8622b814fda5f54",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/core_top.v",
+      "sha256": "a3a96ef07ba34b193e49717f2bfd29f478eb7b2dcbe3af15f1b2b4a377bf7867",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/gba_sdram_clock.v",
+      "sha256": "e2bb3e9eeab2faccee0c06276a76c10e6df24aa2045341f2fbcda2a9c7578a53",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase/mf_pllbase_0002.qip",
+      "sha256": "eb47247cb283d3bd21d865ef0152993978eeaaec4b72c66a39746c0375f25815",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase/mf_pllbase_0002.v",
+      "sha256": "8ac14b23e393a8e74dc48fc6c067cf1e83c0198b2a781a6909c134a2656f791e",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase.bsf",
+      "sha256": "07abb34dcb06e12eeecbf236aeeaa75e7ed34c048ae3945b90fd32f57fe82034",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase.ppf",
+      "sha256": "b14d0417220d002fce40a144c5dc8dad39ea66ece0adc919170d07d52dcda5de",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase.qip",
+      "sha256": "6b253e069c926e9dc429a614d20515c9b51ac031aa873634ce3284b3dd01233a",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase.sip",
+      "sha256": "d77c520efbe7fd8531c3a3497f2359140cc76631f5ab826396b5420d1b8c7bd8",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase.spd",
+      "sha256": "d8646fe21873b0c06aeec4a4f14dc17507b0485e9c7e6d1256da5512039678e9",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase.v",
+      "sha256": "f060e91b19e9d78a6949488bd81f1dae35fef61ab8872b1721ba72bdf6ca589d",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/aldec/rivierapro_setup.tcl",
+      "sha256": "3b6de07c1cc04e9f7b7604d947e648411fab117109d86f5914c09b5cb4679db4",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/cadence/cds.lib",
+      "sha256": "46dd738642b9cf11b65234fad487e33390f271ee7e7efd236b271d01d80731e3",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/cadence/hdl.var",
+      "sha256": "e265aff8a21b8913b2c80771e606b9d636225551f3d8faee4e01015540092723",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/cadence/ncsim_setup.sh",
+      "sha256": "577723b921b0f68e9c6b5d3d326e7ed5dde15f402a16644c71a78f47076eb7cc",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/mentor/msim_setup.tcl",
+      "sha256": "811225061a2cc424890acec6f4bb02e773f9bdf68d6af0162505419e8f314dd9",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/mf_pllbase.vo",
+      "sha256": "ffe23f3834e60aad6f3ac3ee45024f1388c317c4d344803ec1493426a2efe662",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/synopsys/vcs/vcs_setup.sh",
+      "sha256": "130c91fb35c254dbba19beb7fd26d88e9ca6db249e3edeae6e2e1a5ef84c77b6",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/synopsys/vcsmx/synopsys_sim.setup",
+      "sha256": "4330adbdae577a3e54e8c8c324aefc37d50eba7324a672cd4ce5767f8941e264",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim/synopsys/vcsmx/vcsmx_setup.sh",
+      "sha256": "d03aeffb31b2d5560b96b99856d741aec6556f42007c8cbfcb0c07ab2d5daf3c",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/mf_pllbase_sim.f",
+      "sha256": "066fdaf5fb0232cc648bc58d7c2775ecad4deb7ede0d06b8eee1bbc417b946f3",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/pin_ddio_clk.ppf",
+      "sha256": "dad3be782d52e2b593933e9a9cbd07e9223f04f89cfb81d80641d0a93ed8fcfd",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/pin_ddio_clk.qip",
+      "sha256": "856b5ad820a3b4b3afa1b2508757b0e85b94e6c2158c294c379e7643623bfbee",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/pin_ddio_clk.v",
+      "sha256": "52fe791e70e99ed74592e50f58460293de63f16af6272d491e896bb78a1c3025",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/save_sram_constraints.sdc",
+      "sha256": "d3525e333733dd04e9831c8687bbec9d4db836f43178412d99c9a058913e83c3",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/sdram_constraints.sdc",
+      "sha256": "2a192237597e3b8c93001bcae01d1412623ee43312e9c71e6bbd622914450e7a",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/stp1.stp",
+      "sha256": "23c2c5c2abb9482a8e2f2993b910509ab8891d5f22c2a8d99195ae71fd502c17",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/apu/gba_apu.sv",
+      "sha256": "aefb57ca85de047212793d64c9c4faa9aeffc708a1bad036de81f9e5d936f9a1",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/apu/gba_audio_output.sv",
+      "sha256": "8689c7b1799c04fa3ab02939d18b67c420cb601f72b6077b891736e608aae0a3",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/apu/gba_psg.sv",
+      "sha256": "a71e64b6dc2e6aa4907fd9aaa47a24f89da740d23e218db5a88253849ee3b4b9",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/bus/gba_bus.sv",
+      "sha256": "6738c86f4597e3a2a4d5e442334fbca915f9f4ac6905690734384f92c30723fb",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/cpu/arm7tdmi_core.sv",
+      "sha256": "12decd9c59005eb3993eea3af94f646bca4fc0882bea5c847b1d258fb2c6f8b5",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/cpu/gba_cpu_halt.sv",
+      "sha256": "bede7f7f828ece2c8d71fb218a4f843babd77b15c6e3552845fb790c31f319b6",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/dma/gba_dma.sv",
+      "sha256": "1b9183ceeb0874d19df055f1678530d15681f6e1080d168ebcf634a5d5022cd5",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/interrupts/gba_interrupts.sv",
+      "sha256": "5cb563a1bea501d1188e55a0772ae0110ba25702ca2d5a64bf4cfef7aad6107f",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_bios_ram.sv",
+      "sha256": "c1525b5eeadc0e736b8e9ed0cab38af4f498f6d46065ad72c75a7bdc1c2e19ff",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_cartridge.sv",
+      "sha256": "531dd0b7c8fc43d3d66fc8dc70d7e7bfd3ef0c036b591d2882118226b219c309",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_cartridge_psram.sv",
+      "sha256": "bdf038f3ed48d1ed5f45dac61b04a74b24a913be7868d68b5c7da9070d3f6393",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_cartridge_rtc.sv",
+      "sha256": "38e3825c7e1c02360af38823501348935ac71d74250ca5587d31e41357869315",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_eeprom.sv",
+      "sha256": "7705901976096b39b728472429175b301dacfdc9af011e5a7d3d6bad40c04fbf",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_eeprom_blank.mif",
+      "sha256": "c7cf5ee9020e8bc3bbce86bc0f6b764b15f5cd63ca21540312ca45932787ef3a",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_eeprom_blank.ver",
+      "sha256": "abf4740ca55dcd14ea6ebea7de834df8f887a1ee5c47053b487a00c501103a2f",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_ewram_cached_psram.sv",
+      "sha256": "72b35243a536b044261eb8266b3381de352aa37413a2a37cdcac8d7a0de60dee",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_ewram_psram.sv",
+      "sha256": "b77e77c2500c41257ce814980e9bec88169d3ad23921728e6f584ec119ed0bd8",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_flash.sv",
+      "sha256": "37b4fcdb421b1cfd013656a529a285c575211cdd2fdfafe2e1c0a52bbd723f86",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_flash_blank.mif",
+      "sha256": "517b33513a195ae628abe13fabdc3c5fe1ac3972e0075121ff632f3b676bde80",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_flash_blank.ver",
+      "sha256": "e200734095e538a558305dc9c0bb66b019e4f03337bdedca9d0bda6419f6ec27",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_flash_sram.sv",
+      "sha256": "9eb21dd113d4906cd5c4746118418a3484564f9e8cd58afd145de8a16406f86c",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_memory_map.sv",
+      "sha256": "91ddf18382d8a08040647911a92cc21b4b9f7d03484060badf8565684d2497da",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_oam_ram.sv",
+      "sha256": "9e77cf60b0c46b3d9a6768026474c7ad2e0fb422672804fde5b815d352a0a03a",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_pocket_iwram.sv",
+      "sha256": "9d58b65d2bf5a0f13a19668571e8b0e5f8612ec7a81ad3df0cc1f6af61ad9264",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_pocket_palette.sv",
+      "sha256": "035e21b82caf958bef5186f7cbbb5457d16300b5228ebed1a182965049744be7",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_rom_load_decode.sv",
+      "sha256": "a75336a52a8f686d851d98afe8002a1b0c542ab63bcfc295ebe77c18d583121f",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_rtc_elapsed_rebase.sv",
+      "sha256": "fb8a093071ab3bd9125cd067801ba2af16bec355294d102c08a78d5baeeda08a",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_rtc_persistence_engine.sv",
+      "sha256": "3cc6025c38b341d3e2a9d2624e42c2dce620fbf405321812fc510c4998c87de8",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_save_bridge.sv",
+      "sha256": "84cdb385c28e27f4e1a9ae49ebba8281a518de4e9444fd57522a08c223105e43",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_save_sram_backend.sv",
+      "sha256": "9b89beedc6c89b8f52c52c5440eb1c770369f379d9dfa97726c85cb400816e91",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_save_transfer_guard.sv",
+      "sha256": "143e2e0be87a35a763664208462fbfdfd417e361cda540c1411524101649c0df",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_sdram_arbiter.sv",
+      "sha256": "3a1f83c82731c3cd457d2f2c1687c0c9af48430d49878f5f0a250a79e36e4c0b",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_sdram_cdc.sv",
+      "sha256": "095b46a914c6ce93943109883b26ffff72614183f5fad4d738bf51729ad79373",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_sdram_controller.sv",
+      "sha256": "6e5f216448a549c3b7290c39c3d903ec8b206766d4f26a2e3dce087aa9d3525d",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_sdram_rom_adapter.sv",
+      "sha256": "af3bfa85c9f6d840d2c5d6eb9c0c648e034ec617395bf8b790a293145aabbd3b",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_vram_dualport.sv",
+      "sha256": "4d9e148f4fb99237ac10ba4cef556fae9174267dbff17ab4f5e57b54a2a1a11f",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_vram_render_scheduler.sv",
+      "sha256": "752adbc9b9e175018500fd40c2098e9e1247c50943a5c91b0c5e24c8144cadf5",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/pocket_psram.sv",
+      "sha256": "57833815cbe4f268e2a7f955d9199bded0fb032264644d2795a67db35e59a1df",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/pocket_sram.sv",
+      "sha256": "938efc68a83e8ab6fcd55791b7930077cfb0545f74d2b4e92e7a98c3080bcf2a",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/overlay/gba_playtime_clock.sv",
+      "sha256": "e9c43d90e26fe390eba3be9699bf498083b176f30a955592848699d996add076",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/overlay/gba_playtime_format.sv",
+      "sha256": "a28a36cfd9aca79472657d45fc4564e74e4cb3c9469faaefec3806d9e064ccb4",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/overlay/gba_playtime_host.sv",
+      "sha256": "966bb024076fc0d5f7eb25fd23306e056a38b1e17d58d024c72411b98c8ff753",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/overlay/gba_rtc_persistence_link.sv",
+      "sha256": "5b590f424f35601f17bb898749b97b06d6897c2dce361bd4971018a231b0a80c",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/overlay/gba_save_datatable.sv",
+      "sha256": "0b2d0ec4ae1c48a8903be616adbe64b12fd654087a6a8309a90ce636d8b1fb74",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/ppu/gba_apf_video_out.sv",
+      "sha256": "401e6cb568aa61be8a5ecd40d166a514be0fa78daae6e06b578e7082b26c6d51",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/ppu/gba_compat_graphics.sv",
+      "sha256": "d5bc51ad9d9e01625288dca6e15b7ca319b82c61de1cafc0a85f343a987d8641",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/ppu/gba_framebuffer_ram.sv",
+      "sha256": "ffd04fa395c58205c98464dc56ecfd31d6da6534a3ac448ef97ac18fc6789573",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/ppu/gba_obj_row_cache.sv",
+      "sha256": "9145359661616e5696c09c1901ada35dfd323cd40b323f8a46bbe4686cf0cc84",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/ppu/gba_ppu.sv",
+      "sha256": "4c17326402a3269a618a323504ad04986cbf9cdf71035ee9ba442840a9d2a099",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/ppu/gba_video_test_pattern.sv",
+      "sha256": "9280cba85d0c2aea46b72d7ed847a1441da805684be9c93258b4076336f580bb",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/serial/gba_serial.sv",
+      "sha256": "86dad8dd35889a4eed7c8ce9edab22e8b96ccaa98250c1ca45fd44c4a2eba3d0",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_apf_buffer.sv",
+      "sha256": "43cece89dfc3a232bc368c82335cf59ac89a131ed0c5a9969bf2c3f1b0772b1e",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_async_port.sv",
+      "sha256": "3ef8f7dec609356eb5389876d197adbcba50a4479b763c3f5c627379bc4632eb",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_freeze.sv",
+      "sha256": "1896abd991345e6e37c8fe13a17c4807c05fda7c551c0c14c82cc79b3f03b6f9",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_host.sv",
+      "sha256": "fa1abd71645ebdfd37fe9fce7ed5c7dee670a5779023a7d041465f2a4e5a2875",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_identity.sv",
+      "sha256": "0ab85de24e7de73cf2c1a1f28dd402cf6e3c038681b4529873d39243d9475ac8",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_image_validator.sv",
+      "sha256": "107757f24f3a548ae4b51c4edb64d9ed5871f66cf3cf364b5ee2cb4240c3d74f",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_machine.sv",
+      "sha256": "4bd3ba305cc1f05845e29f9cca7f4a541d311eff24eae26cf74cee4294e7dfb7",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_machine_access.sv",
+      "sha256": "688c3034f2018ee61b5e3a3917e8de1705d7ca9c0b0c4040c63dcd91615ffc29",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_machine_job.sv",
+      "sha256": "5e05b2b81f1801cc7d6a323678c00eea9c8bad69edaa6bd06899b340682cef98",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_machine_validator.sv",
+      "sha256": "f1dd4c43d59ba4704f623628d2e3d5ba02ebe098337fd169d781622eddb9af87",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_memory_access.sv",
+      "sha256": "7ff08f324ff228769914044a121aa5400ebdb08297feb11a55657a1c9bf345c1",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_register_access.sv",
+      "sha256": "bfc9abc4ac7d42d88f24d506ddd6f9b2501da4be1af82a72b0dda51c1a70c85c",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_register_validator.sv",
+      "sha256": "343a74be0d15f9ee7bc48618ffa4f3875d3c84829c2db9cd2992c7b7d6af92ac",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_save_access.sv",
+      "sha256": "b7ddd7b8d1838d85d406bdd885c744b72c3a84ce576c5e28d221e0f42b7c79f6",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_staging.sv",
+      "sha256": "a06cc64b730b76085808c69dd4556529655918b8b3e8ed1cc5836e4b4ae2516f",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_video.sv",
+      "sha256": "1f40f734ee5c63259decc25c85f49021a6b4e8275acc81ac674d16526e85a9d6",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/state/gba_state_word_copy.sv",
+      "sha256": "4aa32db332ad49c94b6eee96bc51472ac786cf03d9e404437c57898e16b10fb7",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/timers/gba_timers.sv",
+      "sha256": "aefe366a40a76223b4aa7677763ee4453727755a85f85fe54819430c396c1ebe",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_bios_wait_trace.sv",
+      "sha256": "dfcad56fc4e980008b969608c653cb7167b3814388f7abfc4226e1c3057d2f16",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_boot_trace.sv",
+      "sha256": "6dedcdc0aa5faabe4625b65d0b10f8f45a682aca6e148edc60222be54a4557fb",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_core_top.sv",
+      "sha256": "08bf809f02ab0a1328e16ba91ba086d4f6c5d436a537998b334074bb2d2ff525",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_cycle_scheduler.sv",
+      "sha256": "4c59d7d33e467a3ba3d3a0eedc58416f0e5d33f24b5ec17044c0083ad7f907cb",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_fast_forward.sv",
+      "sha256": "5fc8da372d787ab62283aff49cd566bcdd6276e9b8d797f32614e0fd628f6d1c",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_game_irq_trace.sv",
+      "sha256": "f8e1cf768e5a991c07864f0142a66fe40e16b065e15cd45592d5c16222150838",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_game_state_trace.sv",
+      "sha256": "af9fd20a554fc3041475c7b1e84dfbdb8af87ad39bcf57efc8e17edb93580840",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_gamepak_prefetch.sv",
+      "sha256": "5f3531785ad19cfed6f72783a8d2c0b0698da6561f27cb8497689bbe35bb8c2a",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_header_transfer_trace.sv",
+      "sha256": "aa5096fa23e4e5969bfb7935eaba623e1746523202159934942e17933c1b2303",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_rom_profiler.sv",
+      "sha256": "e2f145a4926bc5eda1339adf429af8a905e3c21b3312ac3147274152b129a674",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_runtime_log.sv",
+      "sha256": "7ef1823a4216707e0b0c80ea8c1cacef9a30208dcc9871bb29a3cb92309ce4c9",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_stall_profiler.sv",
+      "sha256": "c31bdd4fdfe178c4a5829e1f410c8572d74646364c0816c5567fcc5e24ef06d8",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_startup_reset.sv",
+      "sha256": "2057a2053b25bd83b5c8a00ad643796bbdbf4a643f76219ece5ecf8f54ae2735",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_stop_resync.sv",
+      "sha256": "f286deab3c72e5ba264dcbbc12f26c3e9838dffa23494ff8b68ab24ecdd6be9c",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_system_top.sv",
+      "sha256": "7c8e968ae5e1ff92b9e663550aeb069bb64eff847eb5d9535c4df8b0f3e8daae",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_video_trace.sv",
+      "sha256": "080b641263787971fb63514e3a0d70752a6eeb469b3aaf253deeabf1c481719e",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "pocket/manifest.json",
+      "sha256": "4f90e9275d1dbbb4d74d4729390f5d9dd862d479a1b844a665e136efea91a880",
+      "kind": "release-metadata"
+    },
+    {
+      "path": "pocket/README.md",
+      "sha256": "d98c5c9db700288a62fa375c8a6c4d465efdf23646039b27a77fc93dd39601dc",
+      "kind": "release-metadata"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/audio.json",
+      "sha256": "be05e851fb4cf341481c38b4d0ca7006c049b66a712281fab0e70d1b4eef267d",
+      "kind": "tested-package"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/bitstream.rbf_r",
+      "sha256": "96ff681ddfc88d984b2a8a9453411776d69d4cf61a2329a7f4a82932b8c951b5",
+      "kind": "tested-package"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/core.json",
+      "sha256": "14984f9352cdc26ae1d8f4fa9e542a6b74923086308c8c3f5700b05401e2c1c8",
+      "kind": "release-metadata"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/data.json",
+      "sha256": "8b74f058a8bf0710ed156d07e0edec86e8e0474507a0753d4d909f4242092a43",
+      "kind": "tested-package"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/icon.bin",
+      "sha256": "2086d68e73fabdbe51ac98bdbcf65b85b814ce92ab8718a7927c81e9b3ddc05c",
+      "kind": "tested-package"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/input.json",
+      "sha256": "e0c5db45e264d3e5e035fe1380a0ef788e1ec562e5cbe869576899977ac2fbd4",
+      "kind": "tested-package"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/interact.json",
+      "sha256": "814656d658b6c2df110d71859b15175a8402c257089f0fcb7b4ea76c5fe13884",
+      "kind": "tested-package"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/variants.json",
+      "sha256": "738f510d58f63d7faf6c24a7c80a566b02fc6314611aece35895bf426bff9ec5",
+      "kind": "tested-package"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/video.json",
+      "sha256": "5b4296030dc76484038999f902c05a8f568a37b3074b636d6cbf7c9a4cdb5ba2",
+      "kind": "release-metadata"
+    },
+    {
+      "path": "pocket/Platforms/gba.json",
+      "sha256": "5dbd03bec894d749ab5ac49692177090ff36380cff3f3783ccc35c78287992dd",
+      "kind": "tested-package"
+    },
+    {
+      "path": "src/tb/gba_playtime_format_tb.sv",
+      "sha256": "5d4cab7c7c3df5a6ba5d959191f953a7ebd42704e48ce0a43bcb79b54b96b77b",
+      "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_playtime_decode_tb.sv",
+      "sha256": "95803f093957015a0b5bed98820d9ba8286796b09fd3aed1be24e1882a14aa8a",
+      "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_playtime_clock_tb.sv",
+      "sha256": "cabce6bc4d8d48a029e51ea3c792a710db30e8313fc28f466e6b0e6a80540905",
+      "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_playtime_host_tb.sv",
+      "sha256": "c0493c44bd39f39e8023c45ba3b92bc3c4a1e228a0040927a0abe7d3c3b91eea",
+      "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_playtime_overlay_tb.sv",
+      "sha256": "f36339c10591d1b4a921bb1d60bba926da347938d08af90db0e61853e53474a1",
+      "kind": "simulation-source"
+    }
+  ],
+  "hardware_acceptance": {
+    "visual_formatting": true,
+    "day_rollover_tested": false,
+    "exhaustive_compatibility": false
+  }
+}

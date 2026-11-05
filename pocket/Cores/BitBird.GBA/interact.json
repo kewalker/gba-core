@@ -1,0 +1,121 @@
+{
+  "interact": {
+    "messages": [],
+    "variables": [
+      {
+        "id": 260,
+        "name": "Fast-forward",
+        "type": "check",
+        "enabled": true,
+        "persist": true,
+        "defaultval": 0,
+        "value": 1,
+        "value_off": 0,
+        "address": "0x10000010"
+      },
+      {
+        "id": 261,
+        "name": "Fast-forward speed",
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "defaultval": 1,
+        "address": "0x10000014",
+        "options": [
+          {
+            "name": "1.5x",
+            "value": 0
+          },
+          {
+            "name": "2x",
+            "value": 1
+          },
+          {
+            "name": "Max",
+            "value": 2
+          }
+        ]
+      },
+      {
+        "id": 262,
+        "name": "Fast-forward mute",
+        "type": "check",
+        "enabled": true,
+        "persist": true,
+        "defaultval": 0,
+        "value": 1,
+        "value_off": 0,
+        "address": "0x10000018"
+      },
+      {
+        "value_off": 0,
+        "type": "check",
+        "persist": true,
+        "defaultval": 0,
+        "value": 1,
+        "enabled": true,
+        "name": "Show clock",
+        "address": "0x10000000",
+        "id": 256
+      },
+      {
+        "value_off": 0,
+        "type": "check",
+        "persist": true,
+        "defaultval": 0,
+        "value": 1,
+        "enabled": true,
+        "name": "Show session time",
+        "address": "0x10000004",
+        "id": 257
+      },
+      {
+        "value_off": 0,
+        "type": "check",
+        "persist": true,
+        "defaultval": 0,
+        "value": 1,
+        "enabled": true,
+        "name": "Show total playtime",
+        "address": "0x10000008",
+        "id": 258
+      },
+      {
+        "enabled": true,
+        "address": "0x1000000C",
+        "name": "Overlay position",
+        "id": 259,
+        "options": [
+          {
+            "name": "Top left",
+            "value": 0
+          },
+          {
+            "name": "Top centre",
+            "value": 4
+          },
+          {
+            "name": "Top right",
+            "value": 1
+          },
+          {
+            "name": "Bottom left",
+            "value": 2
+          },
+          {
+            "name": "Bottom centre",
+            "value": 5
+          },
+          {
+            "name": "Bottom right",
+            "value": 3
+          }
+        ],
+        "type": "list",
+        "persist": true,
+        "defaultval": 0
+      }
+    ],
+    "magic": "APF_VER_1"
+  }
+}

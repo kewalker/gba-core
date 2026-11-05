@@ -1,0 +1,57 @@
+{
+  "data": {
+    "magic": "APF_VER_1",
+    "data_slots": [
+      {
+        "name": "Game Pak",
+        "id": 0,
+        "required": true,
+        "parameters": 73,
+        "extensions": [
+          "gba",
+          "bin"
+        ],
+        "size_maximum": 33554432,
+        "address": "0x08000000"
+      },
+      {
+        "name": "Save",
+        "id": 1,
+        "required": false,
+        "parameters": 36,
+        "nonvolatile": true,
+        "extensions": [
+          "sav"
+        ],
+        "size_maximum": 131088,
+        "address": "0x0E000000"
+      },
+      {
+        "name": "BIOS",
+        "id": 2,
+        "required": true,
+        "parameters": 73,
+        "extensions": [
+          "bin",
+          "rom"
+        ],
+        "filename": "gba_bios.bin",
+        "size_exact": 16384,
+        "address": "0x00000000"
+      },
+      {
+        "name": "Playtime & RTC",
+        "id": 3,
+        "required": false,
+        "parameters": 36,
+        "nonvolatile": true,
+        "extensions": [
+          "gbkstat"
+        ],
+        "size_maximum": 48,
+        "address": "0x10000100"
+      }
+    ]
+  }
+}
+
