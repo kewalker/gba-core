@@ -57,8 +57,8 @@ hardware documentation and reference projects:
 - **pret and zeldaret contributors** — [pokeemerald](https://github.com/pret/pokeemerald), [pokefirered](https://github.com/pret/pokefirered) and [The Minish Cap reconstruction](https://github.com/zeldaret/tmc), consulted while investigating palette and save compatibility.
 - **Alliance Memory** — device data sheets used in Pocket memory-interface timing work.
 
-Development used OpenAI Codex for implementation, investigation and validation
-tooling. Hardware testing and acceptance are recorded separately from simulation.
+**AI disclosure:** I used LLMs to help with research and development.
+All playtesting on the Analogue Pocket was done by people.
 
 Included framework/IP files retain their original notices. The other projects
 above are credited for documented reference use; this does not represent an
