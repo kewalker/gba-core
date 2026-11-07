@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "release_version": {
     "version": "0.1.0",
-    "tag": "v0.1.0"
+    "tag": "v0.1.0",
+    "date": "2026-11-07"
   },
   "image_sha256": "96ff681ddfc88d984b2a8a9453411776d69d4cf61a2329a7f4a82932b8c951b5",
   "timing": {
@@ -657,7 +658,7 @@
     },
     {
       "path": "pocket/manifest.json",
-      "sha256": "4f90e9275d1dbbb4d74d4729390f5d9dd862d479a1b844a665e136efea91a880",
+      "sha256": "9267b0f08abfbdeda0163d9f487e009fe587ee67163655ad6791a69cc22050a8",
       "kind": "release-metadata"
     },
     {
@@ -677,7 +678,7 @@
     },
     {
       "path": "pocket/Cores/BitBird.GBA/core.json",
-      "sha256": "14984f9352cdc26ae1d8f4fa9e542a6b74923086308c8c3f5700b05401e2c1c8",
+      "sha256": "7d47ba99b554b0012aa1dbfee1ea8a1e753eed51cd3a496acab7d0810c3a6e7b",
       "kind": "release-metadata"
     },
     {

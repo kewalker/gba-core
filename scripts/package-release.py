@@ -77,7 +77,9 @@ Source archive supplied beside this package: {source_name}
 
 The archive is an export of that exact source commit, including build scripts,
 constraints, third-party notices and installation/build documentation. See
-docs/build.md. The standalone build reproduces the included FPGA image exactly.
+docs/build.md. Exported FPGA inputs and the included image match the qualified
+playtime candidate exactly. This updated checkout has not been independently
+recompiled; docs/build-validation.md records the qualification scope.
 '''
         source_description += ('\nSource repository: ' + args.repository_url + '\n') if args.repository_url else '\nNo source URL was supplied; use the matching source archive and recorded source commit.\n'
         (package / 'SOURCE.md').write_text(source_description, encoding='utf-8')

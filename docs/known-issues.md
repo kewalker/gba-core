@@ -21,7 +21,9 @@
 
 The FPGA image in the 0.1.0 package is byte-identical to the hardware-tested
 candidate. Moving it to this repository, changing version/documentation or adding
-licenses does not require repeating the completed gameplay tests. The standalone
-build and 21 timing checks also reproduced the same image. Packaging validation
+licenses does not require repeating the completed gameplay tests. The current
+exported inputs match the qualified playtime candidate, whose 21 timing checks
+pass. The updated release checkout has not been independently recompiled; the
+earlier November 4 baseline had that separate check. Packaging validation
 is separate from new hardware testing. No new hardware acceptance is claimed for
 changes that were not actually exercised.
