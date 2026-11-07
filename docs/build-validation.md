@@ -1,4 +1,4 @@
-# Accepted playtime update — November 6, 2026
+# Accepted playtime update â€” November 6, 2026
 
 The shipped image and every exported FPGA build input match the qualified
 playtime candidate byte for byte. Its Quartus 18.1 build, all 18 physical
