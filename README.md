@@ -1,7 +1,7 @@
 # GBA by BitBird
 
 A Game Boy Advance compatible openFPGA core for Analogue Pocket. Version
-**0.1.0**, package identity **BitBird.GBA**, logo **EZ**.
+**0.1.1**, package identity **BitBird.GBA**, logo **EZ**.
 
 ## Features
 

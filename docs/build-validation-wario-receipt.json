@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "version": "0.1.1",
+  "image_sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7",
+  "image_bytes": 1975824,
+  "timing_minima_ns": {
+    "Setup": 0.114,
+    "Hold": 0.089,
+    "Recovery": 4.005,
+    "Removal": 0.613,
+    "Minimum Pulse Width": 0.626
+  },
+  "physical_audits": 21,
+  "fit_seed": 13,
+  "alms": 18097,
+  "source_export_exact": true,
+  "standalone_rebuild_of_public_checkout": false,
+  "rtl_regressions": {
+    "wario-ownership": "PASS",
+    "hblank-display": "PASS",
+    "audio-fifo": "PASS",
+    "audio-fifo-paced": "PASS",
+    "word-reuse": "PASS",
+    "state-resume": "PASS"
+  },
+  "rom_replay": {
+    "file_select_palette_halfwords": 512,
+    "room_loader": "PASS"
+  },
+  "hardware_smoke_test": "User reported Wario level entry and fast-forward working on the installed candidate"
+}

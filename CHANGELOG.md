@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 — 2026-11-09
+
+Fix black screens in Wario Land 4 at save selection and after the level entry
+swirl. DMA now waits for palette RAM reads, acknowledges invalid reads from
+the BIOS and unmapped range, and writes destinations on transfer completion.
+The Pocket smoke test covered gameplay and fast-forward together.
+
 ## 0.1.0 — 2026-11-07
 
 Initial public release of GBA by BitBird, based on the hardware-tested candidate.

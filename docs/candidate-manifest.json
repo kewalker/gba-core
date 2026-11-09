@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "identity": "BitBird.GBA",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "release_version": {
-    "version": "0.1.0",
-    "tag": "v0.1.0",
-    "date": "2026-11-07"
+    "version": "0.1.1",
+    "tag": "v0.1.1",
+    "date": "2026-11-09"
   },
-  "image_sha256": "96ff681ddfc88d984b2a8a9453411776d69d4cf61a2329a7f4a82932b8c951b5",
+  "image_sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7",
   "timing": {
-    "setup_ns": 0.023,
-    "hold_ns": 0.085,
-    "alms": 18074,
-    "physical_audits": 18
+    "setup_ns": 0.114,
+    "hold_ns": 0.089,
+    "alms": 18097,
+    "physical_audits": 21
   },
-  "scope": "Exact source/package export of the timing-qualified and visually accepted playtime update. Day rollover was not exercised on hardware; boundaries are simulation-covered.",
+  "scope": "Exact export of the timing-qualified Wario candidate smoke tested on Pocket.",
   "files": [
     {
       "path": "src/fpga/ap_core.qpf",
@@ -23,7 +23,7 @@
     },
     {
       "path": "src/fpga/ap_core.qsf",
-      "sha256": "939701881827d00366a5c94f79b2b2499080c91a0f829f84d5b1d22d773300fa",
+      "sha256": "031e71ef869c88c5019e01db3fd25ca6aaeecf05a3f360dd24138a3d39fd499a",
       "kind": "qualified-source"
     },
     {
@@ -338,7 +338,7 @@
     },
     {
       "path": "src/rtl/memory/gba_memory_map.sv",
-      "sha256": "91ddf18382d8a08040647911a92cc21b4b9f7d03484060badf8565684d2497da",
+      "sha256": "e67dc5866c70619facc61f3f7bdc053b512744c4aaf01bc7f33a5e076b079236",
       "kind": "qualified-source"
     },
     {
@@ -658,12 +658,12 @@
     },
     {
       "path": "pocket/manifest.json",
-      "sha256": "9267b0f08abfbdeda0163d9f487e009fe587ee67163655ad6791a69cc22050a8",
+      "sha256": "282644f12989e16f6aef8d2bc0cba49c6f46b45278a8caa845c456f526004149",
       "kind": "release-metadata"
     },
     {
       "path": "pocket/README.md",
-      "sha256": "d98c5c9db700288a62fa375c8a6c4d465efdf23646039b27a77fc93dd39601dc",
+      "sha256": "32758ff7f6de3dda9a146e7adbf93af32d81864f8d7f8ed2abc196f942616d74",
       "kind": "release-metadata"
     },
     {
@@ -673,12 +673,12 @@
     },
     {
       "path": "pocket/Cores/BitBird.GBA/bitstream.rbf_r",
-      "sha256": "96ff681ddfc88d984b2a8a9453411776d69d4cf61a2329a7f4a82932b8c951b5",
+      "sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7",
       "kind": "tested-package"
     },
     {
       "path": "pocket/Cores/BitBird.GBA/core.json",
-      "sha256": "7d47ba99b554b0012aa1dbfee1ea8a1e753eed51cd3a496acab7d0810c3a6e7b",
+      "sha256": "1b5b20086781506e6f7c2b8d0bd6607d86026a45c3a7b79fda113e244f327dbc",
       "kind": "release-metadata"
     },
     {
@@ -740,11 +740,35 @@
       "path": "src/tb/gba_playtime_overlay_tb.sv",
       "sha256": "f36339c10591d1b4a921bb1d60bba926da347938d08af90db0e61853e53474a1",
       "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_vram_dma_ownership_tb.sv",
+      "sha256": "b6bba298d56c6ea9908085c70ded3345f42d7606f8b008c1abf60db5cbce1577",
+      "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_hblank_display_dma_tb.sv",
+      "sha256": "e51f3390eb5d35b7b14cd1d3f9172ccab66d6cbcac5fe60241834c59fd9178ce",
+      "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_audio_dma_tb.sv",
+      "sha256": "b1f78d4a14b9248293fa5bf4ccae9a67c5506d1a55f74a77db62cd243c0e9e54",
+      "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_dma_word_reuse_tb.sv",
+      "sha256": "4dd9e3bb1ffe8b62b9ac8994a8ad71071429d067eca6e25d929d944784574f10",
+      "kind": "simulation-source"
+    },
+    {
+      "path": "src/tb/gba_state_dma_tb.sv",
+      "sha256": "f7bb6dbcaeb0aa54da5efd5b55d7cb096de2b7945af911a073d39e0ad43c4fa8",
+      "kind": "simulation-source"
     }
   ],
   "hardware_acceptance": {
-    "visual_formatting": true,
-    "day_rollover_tested": false,
+    "wario_level_entry_and_fast_forward_smoke": true,
     "exhaustive_compatibility": false
   }
 }

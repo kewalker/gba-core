@@ -820,7 +820,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_rtc_persistence
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/overlay/gba_rtc_persistence_link.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/overlay/gba_save_datatable.sv
 
-set_global_assignment -name SEED 18
+set_global_assignment -name SEED 13
 set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 3.0
 set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
 

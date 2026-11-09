@@ -198,7 +198,11 @@ module gba_memory_map #(
     localparam integer OAM_WORDS = 256;
     (* ramstyle = "M20K, no_rw_check" *) logic [31:0] oam [0:OAM_WORDS-1];
     wire [31:0] oam_cpu_rdata;
-    wire oam_dma_access=dma_active && dma_req && dma_addr[31:24]==8'h07;
+    // DMA destination strobes are qualified by the same completion signal
+    // that advances the controller. Keep this declaration ahead of the
+    // physical RAM/I/O port decodes below.
+    logic dma_ready_signal;
+    wire oam_dma_access=dma_active && dma_req && dma_ready_signal && dma_addr[31:24]==8'h07;
     wire [7:0] oam_cpu_addr=oam_dma_access ? dma_addr[9:2] :
         read_state!=0 && pending_addr[31:24]==8'h07 ? pending_addr[9:2] : addr[9:2];
     wire oam_cpu_write=oam_dma_access ? dma_write : req && write && hit_oam && !dma_active;
@@ -333,7 +337,6 @@ module gba_memory_map #(
     logic [31:0] render_cpu_wdata;
     logic [31:0] render_cpu_rdata;
     logic [1:0] dma_vram_wait;
-    logic dma_ready_signal;
     wire [31:0] dma_controller_status;
     assign debug_dma_status = dma_controller_status | {30'b0,cart_req,cart_ready};
     logic [3:0] render_cpu_byteena;
@@ -502,7 +505,7 @@ module gba_memory_map #(
     // DMA ownership suppresses all CPU hits, including a back-to-back hit.
     always_ff @(posedge clk) begin
         if(reset) iwram_cache_valid<=0;
-        else if((dma_active && dma_req && dma_write && dma_addr[31:24]==8'h03) ||
+        else if((dma_active && dma_req && dma_write && dma_ready_signal && dma_addr[31:24]==8'h03) ||
                 (!dma_active && req && write && addr[31:24]==8'h03))
             begin
                 if(iwram_cache_tag[iwram_write_index]==iwram_write_addr[14:2+IWRAM_CACHE_INDEX_BITS])
@@ -514,7 +517,10 @@ module gba_memory_map #(
             iwram_cache_data[iwram_fill_index]<=iwram_ram_rdata;
         end
     end
-    logic [1:0]  dma_iwram_wait;
+    logic [1:0] dma_local_read_wait;
+    wire dma_read_registered_ram = !dma_write &&
+        (dma_addr[31:24] == 8'h03 || dma_addr[31:24] == 8'h05 ||
+         (BLOCK_OAM && dma_addr[31:24] == 8'h07));
     logic [7:0]  pal_ram_addr;
     logic [31:0] pal_ram_wdata;
     logic [31:0] pal_ram_rdata;
@@ -867,12 +873,12 @@ module gba_memory_map #(
     wire [31:0] display_io_addr=state_ppu_config_write ? state_ppu_io_addr : dma_active ? dma_addr : addr;
     wire [31:0] display_io_data=state_ppu_config_write ? state_reg_wdata : dma_active ? dma_wdata : wdata;
     wire [1:0] display_io_size=state_ppu_config_write ? 2'd2 : dma_active ? dma_size : size;
-    wire display_io_write=state_ppu_config_write || (dma_active ? dma_req && dma_write && dma_addr[31:24]==8'h04 : req && write && hit_io);
+    wire display_io_write=state_ppu_config_write || (dma_active ? dma_req && dma_write && dma_ready_signal && dma_addr[31:24]==8'h04 : req && write && hit_io);
 `else
     wire [31:0] display_io_addr=dma_active ? dma_addr : addr;
     wire [31:0] display_io_data=dma_active ? dma_wdata : wdata;
     wire [1:0] display_io_size=dma_active ? dma_size : size;
-    wire display_io_write=dma_active ? dma_req && dma_write && dma_addr[31:24]==8'h04 : req && write && hit_io;
+    wire display_io_write=dma_active ? dma_req && dma_write && dma_ready_signal && dma_addr[31:24]==8'h04 : req && write && hit_io;
 `endif
     wire [31:0] io_aligned = align_store_data(display_io_data,display_io_size,display_io_addr[1:0]);
     wire [3:0] io_byteena = display_io_size==0 ? (4'b0001 << display_io_addr[1:0]) :
@@ -1011,7 +1017,7 @@ module gba_memory_map #(
     assign ppu_vram_wdata = addr[1] ? wdata[31:16] : wdata[15:0];
     assign render_cpu_write = RENDER_SCHEDULER &&
         ((!dma_active && req && write && hit_vram) ||
-         (dma_active && dma_req && dma_write && dma_addr[31:24] == 8'h06));
+         (dma_active && dma_req && dma_write && dma_ready_signal && dma_addr[31:24] == 8'h06));
     // A stalled CPU request can remain asserted throughout DMA. It must
     // never write the address selected for a DMA read (or a pending read).
     assign render_cpu_addr = (dma_active && dma_req && dma_addr[31:24] == 8'h06)
@@ -1042,7 +1048,7 @@ module gba_memory_map #(
         : ((size == 2'b00) ? (4'b0001 << addr[1:0]) :
            (size == 2'b01) ? (addr[1] ? 4'b1100 : 4'b0011) : 4'b1111);
     assign iwram_ram_write = (req && write && hit_iwram && !dma_active) ||
-                             (dma_req && dma_write && dma_addr[31:24] == 8'h03);
+                             (dma_req && dma_write && dma_ready_signal && dma_addr[31:24] == 8'h03);
     gba_pocket_iwram iwram_storage (
         .clk, .write(iwram_ram_write), .addr(iwram_ram_addr),
         .wdata(iwram_ram_wdata), .byteena(iwram_ram_byteena),
@@ -1077,7 +1083,7 @@ module gba_memory_map #(
         : ((size == 2'b00) ? (4'b0001 << addr[1:0]) :
            (size == 2'b01) ? (addr[1] ? 4'b1100 : 4'b0011) : 4'b1111);
     assign pal_ram_write = dma_active
-        ? (dma_req && dma_write && dma_addr[31:24] == 8'h05)
+        ? (dma_req && dma_write && dma_ready_signal && dma_addr[31:24] == 8'h05)
         : (req && write && hit_pal);
     // Mirror palette entry zero for the final mode-2 window mux. Both
     // CPU and DMA byte enables follow the physical palette write port.
@@ -1169,7 +1175,7 @@ module gba_memory_map #(
         if (reset) begin
             dma_vram_wait <= 2'b00;
 `ifdef GBK_POCKET
-            dma_iwram_wait <= 2'b00;
+            dma_local_read_wait <= 2'b00;
 `endif
         end else begin
             // VRAM registers both its address and output. A single wait
@@ -1183,10 +1189,10 @@ module gba_memory_map #(
             // Each DMA read needs a fresh address/output-register delay.
             // Shifting a zero through the old delay lets its high bit survive
             // the one-cycle write phase and acknowledge the next read early.
-            if (!dma_req || dma_write || !(dma_addr[31:24] == 8'h03 || (BLOCK_OAM && dma_addr[31:24]==8'h07)))
-                dma_iwram_wait <= 2'b00;
+            if (!dma_req || !dma_read_registered_ram)
+                dma_local_read_wait <= 2'b00;
             else
-                dma_iwram_wait <= {dma_iwram_wait[0],1'b1};
+                dma_local_read_wait <= {dma_local_read_wait[0],1'b1};
 `endif
         end
     end
@@ -1209,7 +1215,7 @@ module gba_memory_map #(
         // Quiescent state capture/restore happens after DMA releases the bus,
         // so this transient word is discarded before architectural capture.
         if(reset || !dma_active) dma_word_valid <= 1'b0;
-        else if(dma_req && dma_write && dma_word_eligible && dma_word_address==dma_word_tag)
+        else if(dma_req && dma_write && dma_ready_signal && dma_word_eligible && dma_word_address==dma_word_tag)
             dma_word_valid <= 1'b0;
         else if(dma_req && !dma_write && dma_ready_signal && dma_word_eligible && !dma_word_hit) begin
             dma_word_valid <= 1'b1;
@@ -1235,6 +1241,11 @@ module gba_memory_map #(
         // small. The DMA controller separately gates ready with dma_req.
         if (dma_write && (dma_addr[31:24] & 8'hfb) == 8'h00)
             dma_ready_signal = 1'b1;
+        // DMA cannot read BIOS or the unmapped region before EWRAM.
+        // These reads still finish. Wario programs a null source while
+        // installing a disabled HBlank callback during room setup.
+        if (!dma_write && dma_addr[31:25] == 7'd0)
+            dma_ready_signal = dma_req;
         if (!dma_write && dma_addr[31:24] >= 8'h08 && dma_addr[31:24] <= 8'h0d)
             dma_ready_signal = dma_req && cart_dma_response_valid;
         if(dma_hit_eeprom) dma_ready_signal=dma_req && eeprom_ready;
@@ -1243,8 +1254,8 @@ module gba_memory_map #(
         if (RENDER_SCHEDULER && dma_addr[31:24] == 8'h06 && !dma_write)
             dma_ready_signal = dma_req && dma_vram_wait[1];
 `ifdef GBK_POCKET
-        if ((dma_addr[31:24] == 8'h03 || (BLOCK_OAM && dma_addr[31:24]==8'h07)) && !dma_write)
-            dma_ready_signal = dma_iwram_wait[1];
+        if (dma_read_registered_ram)
+            dma_ready_signal = dma_local_read_wait[1];
 `ifdef GBK_DMA_WORD_REUSE
         if(dma_word_hit) dma_ready_signal = dma_req;
 `endif
@@ -1432,7 +1443,11 @@ module gba_memory_map #(
 `endif
         end
         else if (dma_addr[31:24] == 8'h05) begin
-`ifndef GBK_POCKET
+`ifdef GBK_POCKET
+            dma_mem_rdata = dma_size == 2'b01 ?
+                (dma_addr[1] ? {16'b0,pal_ram_rdata[31:16]} :
+                               {16'b0,pal_ram_rdata[15:0]}) : pal_ram_rdata;
+`else
             dma_mem_rdata = dma_size == 2'b01 ? (dma_addr[1] ? {16'b0, pal[dma_addr[9:2]][31:16]} : {16'b0, pal[dma_addr[9:2]][15:0]}) : pal[dma_addr[9:2]];
 `endif
         end
@@ -1470,7 +1485,7 @@ module gba_memory_map #(
             // In particular, never publish a stale IWRAM word sampled from
             // the DMA address as the CPU's completed read.
             read_state <= 3'd0;
-            if (dma_req && dma_write) begin
+            if (dma_req && dma_write && dma_ready_signal) begin
                 if (dma_addr[31:24] == 8'h02 && !EXTERNAL_EWRAM) begin
                     if (dma_size == 2'b01) begin
                         if (dma_addr[1]) ewram[dma_addr[17:2]][31:16] <= dma_wdata[15:0];

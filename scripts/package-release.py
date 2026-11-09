@@ -38,11 +38,12 @@ def main():
     for row in manifest['files']:
         require(sha(ROOT / row['path']) == row['sha256'], 'Input hash changed: ' + row['path'])
     core = read(ROOT / 'pocket/Cores/BitBird.GBA/core.json')['core']
-    require(core['metadata']['version'] == '0.1.0', 'Expected release version 0.1.0')
+    version = manifest['release_version']['version']
+    require(core['metadata']['version'] == version, 'Core and manifest versions differ')
     require(core['metadata']['author'] == 'BitBird' and core['metadata']['shortname'] == 'GBA', 'Core identity differs')
     source_commit = git('rev-parse', 'HEAD')
     out.mkdir(parents=True)
-    receipt = dict(status='PREPARING', version='0.1.0', source_commit=source_commit,
+    receipt = dict(status='PREPARING', version=version, source_commit=source_commit,
                    published=False, installed=False, new_hardware_test=False, image_changed=False,
                    release_approved=False, repository_url=args.repository_url)
     def save():
@@ -62,23 +63,24 @@ def main():
         (package / 'docs').mkdir()
         for name in ('installation.md', 'known-issues.md', 'build.md',
                      'build-validation.md', 'build-validation-receipt.json', 'build-validation-20261104-receipt.json',
+                     'build-validation-wario-receipt.json',
                      'source-attribution-inventory.json'):
             shutil.copyfile(ROOT / 'docs' / name, package / 'docs' / name)
         shutil.copyfile(ROOT / 'docs/package-readme.md', package / 'README.md')
         credits = (ROOT / 'README.md').read_text(encoding='utf-8-sig').split('## Credits and acknowledgements', 1)[1].split('## License', 1)[0]
         (package / 'CREDITS.md').write_text('# Credits and acknowledgements\n' + credits, encoding='utf-8')
         (package / 'Assets/gba/common').mkdir(parents=True)
-        source_name = 'BitBird.GBA_0.1.0-source.zip'
+        source_name = f'BitBird.GBA_{version}-source.zip'
         source_description = f'''# Corresponding source
 
-Version: 0.1.0
+Version: {version}
 Source commit: {source_commit}
 Source archive supplied beside this package: {source_name}
 
 The archive is an export of that exact source commit, including build scripts,
 constraints, third-party notices and installation/build documentation. See
 docs/build.md. Exported FPGA inputs and the included image match the qualified
-playtime candidate exactly. This updated checkout has not been independently
+candidate documented for this version. This updated checkout has not been independently
 recompiled; docs/build-validation.md records the qualification scope.
 '''
         source_description += ('\nSource repository: ' + args.repository_url + '\n') if args.repository_url else '\nNo source URL was supplied; use the matching source archive and recorded source commit.\n'
@@ -88,7 +90,7 @@ recompiled; docs/build-validation.md records the qualification scope.
         package_manifest = [{'path': f.relative_to(package).as_posix(), 'sha256': sha(f)}
                             for f in sorted(package.rglob('*')) if f.is_file()]
         (package / 'manifest.json').write_text(json.dumps(package_manifest, indent=2) + '\n', encoding='utf-8')
-        archive = out / 'BitBird.GBA_0.1.0.zip'
+        archive = out / f'BitBird.GBA_{version}.zip'
         with zipfile.ZipFile(archive, 'x', compression=zipfile.ZIP_DEFLATED) as z:
             z.writestr('Assets/gba/common/', b'')
             for f in sorted(package.rglob('*')):
@@ -116,7 +118,7 @@ recompiled; docs/build-validation.md records the qualification scope.
                        corresponding_source=dict(path=source.name, sha256=sha(source)),
                        remaining_review=['Owner approval', 'Public repository creation and actual publication date', 'Final publication content review'])
         save()
-        print(f'PASS: verified 0.1.0 package and matching source export, unchanged FPGA image; {out}', flush=True)
+        print(f'PASS: verified {version} package and matching source export, unchanged FPGA image; {out}', flush=True)
     except Exception as error:
         receipt.update(status='FAILED', error=str(error))
         save()

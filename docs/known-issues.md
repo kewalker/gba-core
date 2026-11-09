@@ -1,4 +1,4 @@
-# Known limitations — 0.1.0
+# Known limitations — 0.1.1
 
 - Compatibility is supported by the reported hardware tests and development
   regressions, not an exhaustive all-games claim. CPU, video, audio and unusual
@@ -19,11 +19,5 @@
 - The portable build has been tested on Windows with Quartus Lite 18.1. Linux
   builds and a complete portable functional regression suite remain unverified.
 
-The FPGA image in the 0.1.0 package is byte-identical to the hardware-tested
-candidate. Moving it to this repository, changing version/documentation or adding
-licenses does not require repeating the completed gameplay tests. The current
-exported inputs match the qualified playtime candidate, whose 21 timing checks
-pass. The updated release checkout has not been independently recompiled; the
-earlier November 4 baseline had that separate check. Packaging validation
-is separate from new hardware testing. No new hardware acceptance is claimed for
-changes that were not actually exercised.
+The v0.1.1 image matches the candidate smoke tested on Pocket with Wario Land 4.
+See [validation](build-validation.md) for the tested scenes and DMA paths.

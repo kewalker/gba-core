@@ -1,4 +1,4 @@
-# GBA by BitBird — 0.1.0
+# GBA by BitBird — 0.1.1
 
 Game Boy Advance compatible openFPGA core for Analogue Pocket.
 
