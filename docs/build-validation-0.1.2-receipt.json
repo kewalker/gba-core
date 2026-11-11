@@ -1,0 +1,155 @@
+{
+  "status": "PASS",
+  "stages": {
+    "tool-version": {
+      "exit_code": 0,
+      "seconds": 0.44,
+      "log": "tool-version.log"
+    },
+    "map": {
+      "exit_code": 0,
+      "seconds": 216.33,
+      "log": "map.log"
+    },
+    "fit": {
+      "exit_code": 0,
+      "seconds": 759.09,
+      "log": "fit.log"
+    },
+    "sta": {
+      "exit_code": 0,
+      "seconds": 74.75,
+      "log": "sta.log"
+    },
+    "diagnosis": {
+      "exit_code": 0,
+      "seconds": 25.34,
+      "log": "diagnosis.log"
+    },
+    "savestate-crossing": {
+      "exit_code": 0,
+      "seconds": 17.11,
+      "log": "savestate-crossing.log"
+    },
+    "savestate-video": {
+      "exit_code": 0,
+      "seconds": 16.22,
+      "log": "savestate-video.log"
+    },
+    "render-path": {
+      "exit_code": 0,
+      "seconds": 15.67,
+      "log": "render-path.log"
+    },
+    "scanline-crossing": {
+      "exit_code": 0,
+      "seconds": 15.98,
+      "log": "scanline-crossing.log"
+    },
+    "text-coordinate": {
+      "exit_code": 0,
+      "seconds": 16.17,
+      "log": "text-coordinate.log"
+    },
+    "color-effects": {
+      "exit_code": 0,
+      "seconds": 16.19,
+      "log": "color-effects.log"
+    },
+    "fast-clock": {
+      "exit_code": 0,
+      "seconds": 21.81,
+      "log": "fast-clock.log"
+    },
+    "audio-crossing": {
+      "exit_code": 0,
+      "seconds": 16.12,
+      "log": "audio-crossing.log"
+    },
+    "sdram": {
+      "exit_code": 0,
+      "seconds": 25.41,
+      "log": "sdram.log"
+    },
+    "rom-bundle": {
+      "exit_code": 0,
+      "seconds": 17.0,
+      "log": "rom-bundle.log"
+    },
+    "external-save": {
+      "exit_code": 0,
+      "seconds": 17.75,
+      "log": "external-save.log"
+    },
+    "mosaic": {
+      "exit_code": 0,
+      "seconds": 16.72,
+      "log": "mosaic.log"
+    },
+    "playtime": {
+      "exit_code": 0,
+      "seconds": 18.36,
+      "log": "playtime.log"
+    },
+    "stop-resync": {
+      "exit_code": 0,
+      "seconds": 17.56,
+      "log": "stop-resync.log"
+    },
+    "rtc-bundle": {
+      "exit_code": 0,
+      "seconds": 17.41,
+      "log": "rtc-bundle.log"
+    },
+    "rtc-persistence": {
+      "exit_code": 0,
+      "seconds": 19.83,
+      "log": "rtc-persistence.log"
+    },
+    "fast-forward": {
+      "exit_code": 0,
+      "seconds": 16.88,
+      "log": "fast-forward.log"
+    },
+    "cpu-overlap-cone": {
+      "exit_code": 0,
+      "seconds": 16.53,
+      "log": "cpu-overlap-cone.log"
+    },
+    "retained-rom-cone": {
+      "exit_code": 0,
+      "seconds": 16.22,
+      "log": "retained-rom-cone.log"
+    },
+    "validator-stage-cone": {
+      "exit_code": 0,
+      "seconds": 16.3,
+      "log": "validator-stage-cone.log"
+    },
+    "asm": {
+      "exit_code": 0,
+      "seconds": 19.39,
+      "log": "asm.log"
+    }
+  },
+  "installed": false,
+  "hardware_accepted": false,
+  "release_qualified": false,
+  "scope": "Preserved source compile, fitted timing and physical audits; no new simulation or hardware acceptance",
+  "project_references": 98,
+  "source_files": 138,
+  "build_id_policy": "Preserve the sealed build_id.mif/ver bytes; invoke map/fit/sta directly without timestamp pre-flow regeneration",
+  "source_manifest_sha256": "0d3f04ff8b7ca3066a931e9cc3300003a9fd6d24549ff72174425816b9b201ec",
+  "timing_minima_ns": {
+    "Setup": 0.114,
+    "Hold": 0.089,
+    "Recovery": 4.005,
+    "Removal": 0.613,
+    "Minimum Pulse Width": 0.626
+  },
+  "physical_audits": 21,
+  "image_sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7",
+  "image_bytes": 1975824,
+  "equals_preserved_image": true,
+  "image_generated": true
+}

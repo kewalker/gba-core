@@ -1,4 +1,4 @@
-# Installation and use — GBA by BitBird 0.1.1
+# Installation and use — GBA by BitBird 0.1.2
 
 Install the versioned package from the repository Releases page when available.
 BIOS and game files are not included. You need an Analogue Pocket, an SD card and your own GBA files.
@@ -13,7 +13,7 @@ See [Analogue's OS 2.0 notes](https://www.analogue.co/support/pocket/firmware/2.
 ## Install
 
 1. Back up the card, including Cores, Assets, Saves, Settings and Memories.
-2. Extract `BitBird.GBA_0.1.1.zip` to a temporary directory on your computer.
+2. Extract `BitBird.GBA_0.1.2.zip` to a temporary directory on your computer.
 3. Merge its `Cores`, `Platforms` and `Assets` folders into the card root. Merge
    matching folders; do not replace or erase whole card directories. Keep other
    cores and existing game/save data. The README, source information and license

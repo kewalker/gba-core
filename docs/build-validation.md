@@ -1,3 +1,11 @@
+# 0.1.2 full-feature rebuild
+
+Quartus Prime Lite 18.1 compiled the full-feature public FPGA source.
+Minimum setup slack was +0.114 ns and minimum hold slack was
++0.089 ns. All 21 physical audits passed.
+The rebuilt bitstream matches v0.1.1 byte for byte. Hardware test results below cover the earlier releases.
+See the [0.1.2 build receipt](build-validation-0.1.2-receipt.json).
+
 # Wario Land 4 compatibility update
 
 The v0.1.1 image matches the candidate installed and smoke tested on Pocket.
@@ -14,7 +22,7 @@ The Pocket smoke test covered entering and playing a Wario level with
 fast-forward. See the [v0.1.1 validation receipt](build-validation-wario-receipt.json).
 
 The public FPGA build inputs match the qualified candidate byte for byte.
-The public checkout has not been independently recompiled. The checks above
+The v0.1.1 public checkout did not have a separate standalone rebuild. The checks above
 cover the reported Wario failure and the exercised DMA paths.
 
 # Accepted playtime update — November 6, 2026
@@ -36,8 +44,7 @@ Image SHA-256:
 `96ff681ddfc88d984b2a8a9453411776d69d4cf61a2329a7f4a82932b8c951b5`.
 
 See the [0.1.0 export/qualification receipt](build-validation-receipt.json).
-The updated standalone checkout has not been independently recompiled;
-`python scripts/build.py` remains available for that check. The earlier
+The v0.1.0 standalone checkout did not have a separate recompile. The earlier
 November 4 baseline was independently rebuilt byte for byte; its
 [historical receipt](build-validation-20261104-receipt.json) is preserved.
 

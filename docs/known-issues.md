@@ -1,4 +1,4 @@
-# Known limitations — 0.1.1
+# Known limitations — 0.1.2
 
 - Compatibility is supported by the reported hardware tests and development
   regressions, not an exhaustive all-games claim. CPU, video, audio and unusual

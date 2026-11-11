@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "identity": "BitBird.GBA",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "release_version": {
-    "version": "0.1.1",
-    "tag": "v0.1.1",
-    "date": "2026-11-09"
+    "version": "0.1.2",
+    "tag": "v0.1.2",
+    "date": "2026-11-11"
   },
   "image_sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7",
   "timing": {
@@ -14,7 +14,7 @@
     "alms": 18097,
     "physical_audits": 21
   },
-  "scope": "Exact export of the timing-qualified Wario candidate smoke tested on Pocket.",
+  "scope": "Full-feature public source rebuild with passing timing and physical audits.",
   "files": [
     {
       "path": "src/fpga/ap_core.qpf",
@@ -658,12 +658,12 @@
     },
     {
       "path": "pocket/manifest.json",
-      "sha256": "282644f12989e16f6aef8d2bc0cba49c6f46b45278a8caa845c456f526004149",
+      "sha256": "541f35ecdf8e9a41d40a6dfe8ed9a50560e14dc7e9b4ae9d81c9e5f817c22a66",
       "kind": "release-metadata"
     },
     {
       "path": "pocket/README.md",
-      "sha256": "32758ff7f6de3dda9a146e7adbf93af32d81864f8d7f8ed2abc196f942616d74",
+      "sha256": "b97450f65aa5ecd2807ab59667dc2638c6803f9b4f8a194939d28ea291a33a33",
       "kind": "release-metadata"
     },
     {
@@ -674,11 +674,11 @@
     {
       "path": "pocket/Cores/BitBird.GBA/bitstream.rbf_r",
       "sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7",
-      "kind": "tested-package"
+      "kind": "timing-validated-image"
     },
     {
       "path": "pocket/Cores/BitBird.GBA/core.json",
-      "sha256": "1b5b20086781506e6f7c2b8d0bd6607d86026a45c3a7b79fda113e244f327dbc",
+      "sha256": "46eb6df50b275c52bc7e391afd9201d850d7dca2f37df3c1812767dd16131931",
       "kind": "release-metadata"
     },
     {
@@ -713,8 +713,8 @@
     },
     {
       "path": "pocket/Platforms/gba.json",
-      "sha256": "5dbd03bec894d749ab5ac49692177090ff36380cff3f3783ccc35c78287992dd",
-      "kind": "tested-package"
+      "sha256": "e0b16b838c5298577ae0007971dc13f0a61a75cde4ad3776a1fe856d704e27a4",
+      "kind": "release-metadata"
     },
     {
       "path": "src/tb/gba_playtime_format_tb.sv",
@@ -765,10 +765,14 @@
       "path": "src/tb/gba_state_dma_tb.sv",
       "sha256": "f7bb6dbcaeb0aa54da5efd5b55d7cb096de2b7945af911a073d39e0ad43c4fa8",
       "kind": "simulation-source"
+    },
+    {
+      "path": "docs/build-validation-0.1.2-receipt.json",
+      "sha256": "d1f7510b7e4aeb4d69982a01c3324bf323897d37e452d7b4db01bfc028e7455d",
+      "kind": "build-validation"
     }
   ],
   "hardware_acceptance": {
-    "wario_level_entry_and_fast_forward_smoke": true,
-    "exhaustive_compatibility": false
+    "new_hardware_test": false
   }
 }

@@ -64,16 +64,14 @@ new fit. The current build uses its own reports and receipts.
 ## Validation scope
 
 The portable functional regression suite is not yet complete. Build and timing
-checks do not establish new gameplay compatibility. The current exported build
-inputs match the qualified Wario candidate; the updated checkout has not been
-independently recompiled. Future RTL changes require appropriate
+checks do not establish new gameplay compatibility. The 0.1.2 build uses the Wario update FPGA inputs and was recompiled from
+the public checkout. Future RTL changes require appropriate
 functional and hardware validation. Source edits must be intentionally reflected
 in the source manifest before using this frozen-baseline build runner.
 
 ## Qualification history
 
 The November 4 Windows baseline was independently rebuilt byte for byte. The
-Wario update has its own passing fit and 21 timing/physical checks;
-the exported FPGA inputs and image match that qualified candidate exactly, but
-this updated checkout has not had a separate standalone recompile. See
+Wario update passed its fit and 21 physical audits. The 0.1.2
+standalone rebuild passed fitted timing and all 21 physical audits. See
 [current validation](build-validation.md) for the source and hardware scope.

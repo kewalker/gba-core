@@ -63,7 +63,7 @@ def main():
         (package / 'docs').mkdir()
         for name in ('installation.md', 'known-issues.md', 'build.md',
                      'build-validation.md', 'build-validation-receipt.json', 'build-validation-20261104-receipt.json',
-                     'build-validation-wario-receipt.json',
+                     'build-validation-wario-receipt.json', 'build-validation-0.1.2-receipt.json',
                      'source-attribution-inventory.json'):
             shutil.copyfile(ROOT / 'docs' / name, package / 'docs' / name)
         shutil.copyfile(ROOT / 'docs/package-readme.md', package / 'README.md')
@@ -79,9 +79,8 @@ Source archive supplied beside this package: {source_name}
 
 The archive is an export of that exact source commit, including build scripts,
 constraints, third-party notices and installation/build documentation. See
-docs/build.md. Exported FPGA inputs and the included image match the qualified
-candidate documented for this version. This updated checkout has not been independently
-recompiled; docs/build-validation.md records the qualification scope.
+docs/build.md. The included image is from the full-feature Quartus build
+documented in docs/build-validation.md.
 '''
         source_description += ('\nSource repository: ' + args.repository_url + '\n') if args.repository_url else '\nNo source URL was supplied; use the matching source archive and recorded source commit.\n'
         (package / 'SOURCE.md').write_text(source_description, encoding='utf-8')
@@ -116,9 +115,9 @@ recompiled; docs/build-validation.md records the qualification scope.
         receipt.update(status='PASS', image_sha256=sha(image), verified_package_files=len(expected),
                        archive=dict(path=archive.name, sha256=sha(archive)),
                        corresponding_source=dict(path=source.name, sha256=sha(source)),
-                       remaining_review=['Owner approval', 'Public repository creation and actual publication date', 'Final publication content review'])
+                       remaining_review=['Publish the verified archives on GitHub'])
         save()
-        print(f'PASS: verified {version} package and matching source export, unchanged FPGA image; {out}', flush=True)
+        print(f'PASS: verified {version} package and matching source export; {out}', flush=True)
     except Exception as error:
         receipt.update(status='FAILED', error=str(error))
         save()

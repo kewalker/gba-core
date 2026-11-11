@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 — 2026-11-11
+
+Use **Game Boy Advance** as the shared platform display name (PR #1,
+thanks to @davewongillies). Rebuild the full-feature FPGA image with Quartus
+Prime Lite 18.1 and verify timing and all 21 physical audits.
+
 ## 0.1.1 — 2026-11-09
 
 Fix black screens in Wario Land 4 at save selection and after the level entry

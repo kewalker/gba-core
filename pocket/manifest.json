@@ -9,7 +9,7 @@
   },
   {
     "path": "Cores/BitBird.GBA/core.json",
-    "sha256": "1b5b20086781506e6f7c2b8d0bd6607d86026a45c3a7b79fda113e244f327dbc"
+    "sha256": "46eb6df50b275c52bc7e391afd9201d850d7dca2f37df3c1812767dd16131931"
   },
   {
     "path": "Cores/BitBird.GBA/data.json",
@@ -37,10 +37,10 @@
   },
   {
     "path": "Platforms/gba.json",
-    "sha256": "5dbd03bec894d749ab5ac49692177090ff36380cff3f3783ccc35c78287992dd"
+    "sha256": "e0b16b838c5298577ae0007971dc13f0a61a75cde4ad3776a1fe856d704e27a4"
   },
   {
     "path": "README.md",
-    "sha256": "32758ff7f6de3dda9a146e7adbf93af32d81864f8d7f8ed2abc196f942616d74"
+    "sha256": "b97450f65aa5ecd2807ab59667dc2638c6803f9b4f8a194939d28ea291a33a33"
   }
 ]
