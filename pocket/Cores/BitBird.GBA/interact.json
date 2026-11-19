@@ -48,6 +48,17 @@
         "address": "0x10000018"
       },
       {
+        "id": 263,
+        "name": "Soft Colors",
+        "type": "check",
+        "enabled": true,
+        "persist": true,
+        "defaultval": 0,
+        "value": 1,
+        "value_off": 0,
+        "address": "0x1000001C"
+      },
+      {
         "value_off": 0,
         "type": "check",
         "persist": true,

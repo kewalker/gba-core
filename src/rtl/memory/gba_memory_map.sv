@@ -260,11 +260,7 @@ module gba_memory_map #(
         (ewram_port_busy && !ewram_owner_dma && !ewram_write && ewram_ready));
     wire [31:0] ewram_cpu_fast_data=ewram_cpu_response_valid ? ewram_response_data : ewram_rdata;
 `ifdef GBK_POCKET
-    wire local_read_ready=req && !write && !dma_active && read_state==6;
-    wire [31:0] local_read_data=pending_addr[31:24]==0 ? bios_rdata :
-        pending_addr[31:24]==3 ? iwram_ram_rdata :
-        BLOCK_OAM && pending_addr[31:24]==7 ? oam_cpu_rdata : render_cpu_rdata;
-    assign rdata=local_read_ready ? local_read_data : iwram_cache_hit ? iwram_cache_data[iwram_cache_index] :
+    assign rdata=iwram_cache_hit ? iwram_cache_data[iwram_cache_index] :
         eeprom_cpu_read ? eeprom_word :
         cart_cpu_fast_ready ? cart_cpu_fast_data :
         ewram_cpu_fast_ready ? ewram_cpu_fast_data : response_rdata;
@@ -885,7 +881,8 @@ module gba_memory_map #(
         display_io_size==1 ? (display_io_addr[1] ? 4'b1100 : 4'b0011) : 4'b1111;
     wire [31:0] serial_rdata;
     wire serial_irq;
-    gba_serial serial(.clk,.reset,.cycle_enable(peripheral_tick),.stopped(guest_stopped),
+    gba_serial #(.FIXED_CABLE_CLOCK(FAST_CPU)) serial(
+        .clk,.reset,.cycle_enable(peripheral_tick),.stopped(guest_stopped),
 `ifdef GBK_SAVESTATE
         .state_prepare(state_dma_request),.state_hold(state_hold),
         .state_write(state_reg_write && state_reg_addr[15:8]==8 && state_reg_addr[7:0]<10),
@@ -960,9 +957,6 @@ module gba_memory_map #(
     // 4=external EWRAM read, 5/6=registered internal RAM read.
     assign ready = !dma_active && (
                    cart_cpu_fast_ready || ewram_cpu_fast_ready ||
-`ifdef GBK_POCKET
-                   local_read_ready ||
-`endif
 `ifdef GBK_POCKET
                    iwram_cache_hit ||
 `endif
@@ -1114,8 +1108,10 @@ module gba_memory_map #(
     wire pal_bg_half_select = ppu_dispcnt[2:0]==3'd2 && pal_bg_word_valid[1] &&
         pal_bg_word_stage1==pal_bg_render_addr[8:2]
         ? pal_bg_render_addr[1] : pal_bg_half_pipeline[1];
+    wire render_reset;
+    gba_reset_sync render_reset_sync(.clk(render_clk),.reset_in(reset),.reset_out(render_reset));
     always_ff @(posedge render_clk) begin
-        if (reset) begin
+        if (render_reset) begin
             pal_bg_render_addr_stage <= 9'd0;
             pal_bg_half_pipeline <= 0;
             pal_obj_half_pipeline <= 0;
@@ -1144,7 +1140,7 @@ module gba_memory_map #(
     reg [8:0] second_palette_addr;
     reg [1:0] second_palette_half;
     always @(posedge render_clk) begin
-        if(reset) begin second_palette_addr<=0;second_palette_half<=0;end
+        if(render_reset) begin second_palette_addr<=0;second_palette_half<=0;end
         else begin
             second_palette_addr<=ppu_second_palette_read_addr;
             second_palette_half<={second_palette_half[0],second_palette_addr[1]};
@@ -1401,6 +1397,10 @@ module gba_memory_map #(
                 state_reg_valid=!reset;
                 case(state_reg_addr[7:0])
                     1:state_reg_rdata={8'd0,vcount,dispstat_control};
+                    // WININ/WINOUT readback can retain unused bits written
+                    // by the game. Only the six mask bits per window are
+                    // part of the validated display checkpoint.
+                    18:state_reg_rdata={ppu_winout,ppu_winin} & 32'h3f3f3f3f;
                     19:state_reg_rdata={16'd0,ppu_mosaic};
                     21:state_reg_rdata={16'd0,ppu_bldy};
                     22:state_reg_rdata={4'd0,vcount,display_phase,display_dot};
@@ -1420,49 +1420,41 @@ module gba_memory_map #(
     end
 `endif
 
+    logic [31:0] dma_full_word;
     always_comb begin
-        dma_mem_rdata = 32'b0;
+        dma_full_word = 32'b0;
         if (dma_addr[31:24] >= 8'h08 && dma_addr[31:24] <= 8'h0d)
-            dma_mem_rdata = dma_size == 2'b01 ?
-                (dma_addr[1] ? {16'b0,cart_response_data[31:16]} : {16'b0,cart_response_data[15:0]}) : cart_response_data;
-        if (dma_addr[31:24] == 8'h02) begin
-            if (EXTERNAL_EWRAM)
-                dma_mem_rdata = dma_size == 2'b01 ?
-                    (dma_addr[1] ? {16'b0, ewram_response_data[31:16]} :
-                                   {16'b0, ewram_response_data[15:0]}) : ewram_response_data;
-            else
-                dma_mem_rdata = dma_size == 2'b01 ? (dma_addr[1] ? {16'b0, ewram[dma_addr[17:2]][31:16]} : {16'b0, ewram[dma_addr[17:2]][15:0]}) : ewram[dma_addr[17:2]];
-        end
+            dma_full_word = cart_response_data;
+        if (dma_addr[31:24] == 8'h02)
+            dma_full_word = EXTERNAL_EWRAM ? ewram_response_data : ewram[dma_addr[17:2]];
         else if (dma_addr[31:24] == 8'h03) begin
 `ifdef GBK_POCKET
-            dma_mem_rdata = dma_size == 2'b01 ?
-                (dma_addr[1] ? {16'b0,iwram_ram_rdata[31:16]} :
-                               {16'b0,iwram_ram_rdata[15:0]}) : iwram_ram_rdata;
+            dma_full_word = iwram_ram_rdata;
 `else
-            dma_mem_rdata = dma_size == 2'b01 ? (dma_addr[1] ? {16'b0, iwram[dma_addr[14:2]][31:16]} : {16'b0, iwram[dma_addr[14:2]][15:0]}) : iwram[dma_addr[14:2]];
+            dma_full_word = iwram[dma_addr[14:2]];
 `endif
         end
         else if (dma_addr[31:24] == 8'h05) begin
 `ifdef GBK_POCKET
-            dma_mem_rdata = dma_size == 2'b01 ?
-                (dma_addr[1] ? {16'b0,pal_ram_rdata[31:16]} :
-                               {16'b0,pal_ram_rdata[15:0]}) : pal_ram_rdata;
+            dma_full_word = pal_ram_rdata;
 `else
-            dma_mem_rdata = dma_size == 2'b01 ? (dma_addr[1] ? {16'b0, pal[dma_addr[9:2]][31:16]} : {16'b0, pal[dma_addr[9:2]][15:0]}) : pal[dma_addr[9:2]];
+            dma_full_word = pal[dma_addr[9:2]];
 `endif
         end
         else if (dma_addr[31:24] == 8'h06) begin
 `ifdef GBK_POCKET
-            dma_mem_rdata = dma_size == 2'b01 ?
-                (dma_addr[1] ? {16'b0,render_cpu_rdata[31:16]} :
-                               {16'b0,render_cpu_rdata[15:0]}) : render_cpu_rdata;
+            dma_full_word = render_cpu_rdata;
 `else
-            dma_mem_rdata = dma_size == 2'b01 ? (dma_addr[1] ? {16'b0, vram[dma_addr[16:2]][31:16]} : {16'b0, vram[dma_addr[16:2]][15:0]}) : vram[dma_addr[16:2]];
+            dma_full_word = vram[dma_addr[16:2]];
 `endif
         end
         else if (dma_addr[31:24] == 8'h07 && dma_addr[9:2] < OAM_WORDS)
-            dma_mem_rdata = BLOCK_OAM ? (dma_size==1 ? (dma_addr[1] ? {16'd0,oam_cpu_rdata[31:16]} : {16'd0,oam_cpu_rdata[15:0]}) : oam_cpu_rdata) :
-                dma_size == 2'b01 ? (dma_addr[1] ? {16'b0, oam[dma_addr[9:2]][31:16]} : {16'b0, oam[dma_addr[9:2]][15:0]}) : oam[dma_addr[9:2]];
+            dma_full_word = BLOCK_OAM ? oam_cpu_rdata : oam[dma_addr[9:2]];
+    end
+
+    always_comb begin
+        dma_mem_rdata = dma_size == 2'b01 ?
+            (dma_addr[1] ? {16'b0,dma_full_word[31:16]} : {16'b0,dma_full_word[15:0]}) : dma_full_word;
         if(dma_hit_eeprom) dma_mem_rdata={31'd0,eeprom_bit};
 `ifdef GBK_POCKET
 `ifdef GBK_DMA_WORD_REUSE
@@ -1573,10 +1565,18 @@ module gba_memory_map #(
             read_state <= 3'd6;
         end else if (read_state == 3'd6) begin
 `ifdef GBK_POCKET
-            // The state-6 acknowledgement returns local_read_data directly.
-            // Copying it into response_rdata cannot serve a later state-3
-            // acknowledgement because this path returns straight to idle.
-            read_state <= 3'd0;
+            if (pending_addr[31:24] == 8'h00)
+                response_rdata <= bios_rdata;
+            else if (pending_addr[31:24] == 8'h03)
+                response_rdata <= iwram_ram_rdata;
+            else if (BLOCK_OAM && pending_addr[31:24] == 8'h07)
+                response_rdata <= oam_cpu_rdata;
+            else
+                response_rdata <= render_cpu_rdata;
+            // The request edge clocks the address; state 5 provides the
+            // registered output clock. Intel-model tests include DMA steals
+            // at every phase: a steal cancels this read and retries from 0.
+            read_state <= 3'd3;
 `else
             read_state <= 3'd3;
 `endif

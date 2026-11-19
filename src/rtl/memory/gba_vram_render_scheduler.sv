@@ -32,8 +32,8 @@ module gba_vram_render_scheduler #(
     logic [31:0] ram_render_rdata;
     logic [$clog2(PORTS)-1:0] selected_port;
     logic [PORTS-1:0] selected_lane;
-    wire wrap_round=selected_port == PORTS-1 ||
-        (PORTS>8 && WINDOW_SLOT_ALIASES && mode2_window_reads && selected_port>=7);
+    wire wrap_round=selected_lane[PORTS-1] ||
+        (PORTS>8 && WINDOW_SLOT_ALIASES && mode2_window_reads && |(selected_lane >> 7));
     wire [$clog2(PORTS)-1:0] next_port=wrap_round ? '0 : selected_port+1'b1;
     logic [$clog2(PORTS)-1:0] issued_port;
     logic [$clog2(PORTS)-1:0] waiting_port;
@@ -41,7 +41,7 @@ module gba_vram_render_scheduler #(
     logic issued_halfword;
     logic waiting_halfword;
     logic returned_halfword;
-    logic [16:0] selected_addr;
+    logic selected_halfword;
     logic [15:0] obj_issued_addr;
     integer i;
 
@@ -53,23 +53,50 @@ module gba_vram_render_scheduler #(
     );
     assign cpu_rdata = ram_cpu_rdata;
 
+`ifndef GBK_SAVESTATE
+    // The production renderer has ten fixed slots. A direct slot mux keeps
+    // the PPU coordinate-to-VRAM address cone shallow; retain the generic
+    // reduction for smaller simulation-only scheduler configurations.
+    generate if (PORTS == 10) begin : direct_address_select
+        logic [15:0] direct_selected_addr;
+        always_comb begin
+            direct_selected_addr = '0;
+            case (selected_port)
+                0: direct_selected_addr = render_addr_flat[1 +: 16];
+                1: direct_selected_addr = render_addr_flat[18 +: 16];
+                2: direct_selected_addr = render_addr_flat[35 +: 16];
+                3: direct_selected_addr = render_addr_flat[52 +: 16];
+                4: direct_selected_addr = render_addr_flat[69 +: 16];
+                5: direct_selected_addr = render_addr_flat[86 +: 16];
+                6: direct_selected_addr = render_addr_flat[103 +: 16];
+                7: direct_selected_addr = render_addr_flat[120 +: 16];
+                8: direct_selected_addr = render_addr_flat[137 +: 16];
+                9: direct_selected_addr = render_addr_flat[154 +: 16];
+                default: direct_selected_addr = '0;
+            endcase
+            next_ram_addr = direct_selected_addr < WORDS ?
+                direct_selected_addr[$clog2(WORDS)-1:0] : '0;
+        end
+    end else begin : generic_address_select
+        always_comb begin
+            next_ram_addr = '0;
+            for (integer port_index = 0; port_index < PORTS; port_index = port_index + 1)
+                next_ram_addr = next_ram_addr |
+                    (render_addr_flat[port_index*17+1 +: $clog2(WORDS)] &
+                     {$clog2(WORDS){selected_lane[port_index] &&
+                        render_addr_flat[port_index*17+1 +: 16] < WORDS}});
+        end
+    end endgenerate
+`endif
+
     always_comb begin
         // Decode the slot in parallel with each address's range check.
         // A variable slice followed by the range check put both mux levels
         // after the dependent affine tile address on the fast RAM path.
-        selected_addr = '0;
-`ifndef GBK_SAVESTATE
-        next_ram_addr = '0;
-`endif
+        selected_halfword = 1'b0;
         for (integer port_index = 0; port_index < PORTS; port_index = port_index + 1) begin
-            selected_addr = selected_addr |
-                (render_addr_flat[port_index*17 +: 17] & {17{selected_lane[port_index]}});
-`ifndef GBK_SAVESTATE
-            next_ram_addr = next_ram_addr |
-                (render_addr_flat[port_index*17+1 +: $clog2(WORDS)] &
-                 {$clog2(WORDS){selected_lane[port_index] &&
-                    render_addr_flat[port_index*17+1 +: 16] < WORDS}});
-`endif
+            selected_halfword = selected_halfword |
+                (render_addr_flat[port_index*17] & selected_lane[port_index]);
         end
     end
 `ifdef GBK_SAVESTATE
@@ -99,8 +126,10 @@ module gba_vram_render_scheduler #(
     end
 `endif
 
+    wire render_reset;
+    gba_reset_sync render_reset_sync(.clk(render_clk),.reset_in(reset),.reset_out(render_reset));
     always_ff @(posedge render_clk) begin
-        if (reset) begin
+        if (render_reset) begin
             selected_port <= '0;
             selected_lane <= {{(PORTS-1){1'b0}},1'b1};
             issued_port <= '0;
@@ -121,7 +150,11 @@ module gba_vram_render_scheduler #(
             // Slot 7 cannot be reissued before its three-stage response.
             // Hold its aligned address until that response, then publish the
             // tag with the data. Consumers need not wait a fixed worst case.
-            if (selected_port == 7) obj_issued_addr <= selected_addr[16:1];
+            // The OBJ tag always comes from slot 7, even when other slots
+            // alias their response tags. Avoid routing it through every
+            // background address before the slot-7 clock enable.
+            if (PORTS>7 && selected_port == 7)
+                obj_issued_addr <= 16'(render_addr_flat >> (7*17+1));
             obj_word_valid <= returned_port == 7;
             if (returned_port == 7) begin
                 obj_word_data <= ram_render_rdata;
@@ -167,7 +200,7 @@ module gba_vram_render_scheduler #(
                 issued_port <= 1;
             else
                 issued_port <= selected_port;
-            issued_halfword <= selected_addr[0];
+            issued_halfword <= selected_halfword;
             // RAM has a clocked address and a clocked output. Keep the
             // destination tag and halfword selection aligned with both.
             waiting_port <= issued_port;
@@ -177,7 +210,9 @@ module gba_vram_render_scheduler #(
             // Preserve the BIOS mode-2 eight-slot cadence. Mode 0 adds
             // dedicated BG3 text map/tile slots at the end of the round.
             selected_port <= next_port;
-            selected_lane <= PORTS'(1) << next_port;
+            // Advance the registered one-hot lane directly. The binary slot
+            // still supplies response tags and advances on the same edge.
+            selected_lane <= wrap_round ? PORTS'(1) : selected_lane << 1;
         end
     end
 endmodule

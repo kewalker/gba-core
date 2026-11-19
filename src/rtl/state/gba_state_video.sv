@@ -23,8 +23,10 @@ module gba_state_video(
     // acknowledged preparation grant can release it.
     assign ready=ready_sync[2] || (!prepare && !parked_sync[2]);
     assign release_done=released_sync[2];
+    wire render_reset;
+    gba_reset_sync render_reset_sync(.clk(render_clk),.reset_in(reset),.reset_out(render_reset));
     always @(posedge render_clk)begin
-        if(reset)render_sync<=0;
+        if(render_reset)render_sync<=0;
         else render_sync<={render_sync[1:0],video_invalidate};
     end
     always @(posedge host_clk)begin
@@ -34,8 +36,10 @@ module gba_state_video(
             released_sync<={released_sync[1:0],!blank};
         end
     end
+    wire video_reset;
+    gba_reset_sync video_reset_sync(.clk(video_clk),.reset_in(reset),.reset_out(video_reset));
     always @(posedge video_clk)begin
-        if(reset)begin
+        if(video_reset)begin
             hold_sync<=0;prepare_sync<=0;invalidated_sync<=0;
             phase<=IDLE;target<=0;origin_seen<=0;at_origin<=0;grant<=0;blank<=0;
         end else begin

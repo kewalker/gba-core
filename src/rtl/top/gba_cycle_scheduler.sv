@@ -35,7 +35,8 @@ module gba_cycle_scheduler #(
     reg [PHASE_BITS-1:0] phase;
 `ifdef GBK_FAST_FORWARD
     // Shared fractional phase, unchanged physical clocks and guest charges.
-    // Max consumes one guest tick per physical clock (about 2.38x here).
+    // Max consumes up to one guest tick per physical clock (about 2.38x).
+    // Unaccounted running time advances at half rate to soften frame overruns.
     // Unknown/invalid preference defaults to the original 2x behavior.
     wire [PHASE_BITS-1:0] fast_increment=fast_forward_speed===2'd0 ? (3*TICK_NUMERATOR)/2 :
         fast_forward_speed===2'd2 ? (max_wait ? (TICK_DENOMINATOR+1)/2 : TICK_DENOMINATOR) : 2*TICK_NUMERATOR;
@@ -43,7 +44,8 @@ module gba_cycle_scheduler #(
     wire [PHASE_BITS-1:0] tick_threshold=TICK_DENOMINATOR-tick_increment;
 `endif
 `ifdef GBK_FAST_FORWARD
-    // Private research only. Physical memory clocks continue; idle/HALT tick.
+    // Memory and CPU clocks continue normally. Actual HALT keeps full cadence;
+    // running pipeline gaps use a slower fractional increment, never a freeze.
     wire max_wait=fast_forward===1'b1 && fast_forward_speed===2'd2 &&
         accounted_debt==0 && (cpu_halted===1'b0 || dma_active);
 `endif

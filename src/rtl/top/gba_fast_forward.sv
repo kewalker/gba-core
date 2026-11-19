@@ -44,8 +44,10 @@ module gba_fast_forward(
     // A one-clock synthetic STOP uses the proven frozen-raster handshake to
     // reacquire normal scanout phase after any accelerated interval.
     assign realign=previous_active && !active;
+    wire cpu_reset;
+    gba_reset_sync cpu_reset_sync(.clk(cpu_clk),.reset_in(reset),.reset_out(cpu_reset));
     always @(posedge cpu_clk)begin
-        if(reset)begin
+        if(cpu_reset)begin
             request_sync<=0;previous_active<=0;mute_sync<=0;
             speed_low_sync<=3'b111;speed_high_sync<=0;
         end

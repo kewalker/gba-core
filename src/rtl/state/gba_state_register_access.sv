@@ -44,6 +44,12 @@ module gba_state_register_access #(
             address_of=index<194 ? {group_address,8'(index-index_base)} : 16'h073f;
         end
     endfunction
+    // Materialize the fixed layout in one block ROM. Its registered output
+    // doubles as the address latch for the synchronous peripheral bus.
+    (* ramstyle="M10K" *) reg [15:0] addresses[0:255];
+    initial for(integer index=0;index<256;index=index+1)
+        addresses[index]=address_of(8'(index));
+
     wire address_ok=request_addr<194 || (request_addr==255 && !request_write);
     assign request_ready=phase==IDLE;
     assign response_valid=phase==RESPONSE;
@@ -51,7 +57,7 @@ module gba_state_register_access #(
     initial if(TIMEOUT_CYCLES<1)$error("Invalid register access timeout");
     always @(posedge clk)case(phase)
         IDLE:if(request_valid && request_ready)begin
-            register_addr<=address_of(request_addr[7:0]);register_wdata<=request_wdata;
+            register_addr<=addresses[request_addr[7:0]];register_wdata<=request_wdata;
             writing<=request_write;elapsed<=0;response_error<=0;response_rdata<=0;
             if(cancel || !held || !address_ok)begin response_error<=1;phase<=RESPONSE;end
             else phase<=ACCESS;

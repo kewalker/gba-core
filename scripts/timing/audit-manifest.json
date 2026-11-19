@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "historical_fit": "playtime-units-fit-20261106-17",
-  "scope": "18 preserved physical stages plus CPU, retained-ROM and validator timing cones; original limits unchanged",
+  "scope": "18 preserved physical stages plus CPU, retained-ROM and validator timing cones, the Soft Colors setting crossing, and a reset clock-domain crossing audit; original limits unchanged",
   "audits": [
     {
       "name": "diagnosis",
@@ -95,6 +95,15 @@
       "script": "check-container-stage-timing.tcl",
       "arguments": [],
       "marker": "PASS: staged validator control clears setup and hold in four corners"
+    },
+    {
+      "name": "soft-colors",
+      "script": "check-soft-colors-timing.tcl"
+    },
+    {
+      "name": "reset-crossing",
+      "script": "check-reset-crossing-timing.tcl",
+      "marker": "PASS: no reset crosses a clock domain outside a synchronizer"
     }
   ],
   "files": [
@@ -176,11 +185,19 @@
     },
     {
       "path": "scripts/timing/check-retained-rom-timing.tcl",
-      "sha256": "5179443bf5394344ccf340f4373cb6ea99a5b323060ba28204aa237dd0eba078"
+      "sha256": "01262d14b7c5c622cb308ca0473db26c5733e94ed95162a3f273488602447dbf"
     },
     {
       "path": "scripts/timing/check-container-stage-timing.tcl",
       "sha256": "4e0ecf2c17853c23560493301221aa42fe4d601c90c0e16eb63e4d91c7e7d5c4"
+    },
+    {
+      "path": "scripts/timing/check-soft-colors-timing.tcl",
+      "sha256": "a4a5752c59604cd9779dd721d8f2440c46723024e8354a737f4006248a09599a"
+    },
+    {
+      "path": "scripts/timing/check-reset-crossing-timing.tcl",
+      "sha256": "38adcdb1202857f156d5cffef59c7f67795816d8001d63e2f48e282ad9f1757e"
     }
   ],
   "timing_coverage": [
@@ -267,12 +284,42 @@
     [
       "Fast 1100mV 0C",
       "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Recovery",
       "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
     ],
     [
       "Fast 1100mV 0C",
       "Removal",
       "clk_74a"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 0C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
     ],
     [
       "Fast 1100mV 0C",
@@ -397,12 +444,42 @@
     [
       "Fast 1100mV 85C",
       "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Recovery",
       "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
     ],
     [
       "Fast 1100mV 85C",
       "Removal",
       "clk_74a"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Fast 1100mV 85C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
     ],
     [
       "Fast 1100mV 85C",
@@ -527,12 +604,42 @@
     [
       "Slow 1100mV 0C",
       "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Recovery",
       "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
     ],
     [
       "Slow 1100mV 0C",
       "Removal",
       "clk_74a"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 0C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
     ],
     [
       "Slow 1100mV 0C",
@@ -657,12 +764,42 @@
     [
       "Slow 1100mV 85C",
       "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Recovery",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Recovery",
       "ic|sdram_clocking.forward_clock|forward_pll|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
     ],
     [
       "Slow 1100mV 85C",
       "Removal",
       "clk_74a"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk"
+    ],
+    [
+      "Slow 1100mV 85C",
+      "Removal",
+      "ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk"
     ],
     [
       "Slow 1100mV 85C",

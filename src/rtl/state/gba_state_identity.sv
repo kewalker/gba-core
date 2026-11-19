@@ -10,22 +10,35 @@ module gba_state_identity #(parameter integer BIOS_BYTES=16384)(
     output wire ready,
     output reg [31:0] rom_crc,rom_bytes,bios_crc
 );
+    localparam integer BIOS_NEXT_BITS=$clog2(BIOS_BYTES+1);
     reg rom_complete,bios_complete,rom_ordered,bios_ordered;
-    reg [31:0] rom_next,bios_next;
+    reg [23:0] rom_next_word;
+    reg [BIOS_NEXT_BITS-1:0] bios_next;
     reg busy,work_rom,work_last;
     reg [31:0] work_crc,work_data;
     reg [5:0] bits_left;
     wire [31:0] size=rom_begin ? rom_size : rom_bytes;
     wire size_valid=size!=0 && size<=32'h02000000;
-    wire [2:0] rom_count=(rom_offset[31:2]==size[31:2] && size[1:0]!=0) ?
+    // ROM offsets fit in 23 word bits. Keep one more bit for the terminal
+    // 32 MiB boundary, and reject out-of-range bridge addresses separately.
+    wire [23:0] rom_word={1'b0,rom_offset[24:2]};
+    wire [23:0] size_words=size[25:2];
+    wire [23:0] next_rom_word=rom_word+1'b1;
+    wire valid_word_address=rom_offset[31:25]==0 && rom_offset[1:0]==0;
+    wire partial_rom_word=rom_word==size_words && size[1:0]!=0;
+    wire [2:0] rom_count=partial_rom_word ?
         {1'b0,size[1:0]} : 3'd4;
+    // Accepted offsets are aligned and below the image size. Reuse the
+    // continuation increment for aligned ends. Partial ends are in this word.
+    wire last_rom_word=partial_rom_word ||
+        (size[1:0]==0 && next_rom_word==size_words);
     wire [31:0] next_crc=(work_crc>>1) ^
         ((work_crc[0]^work_data[0]) ? 32'hedb88320 : 32'd0);
     assign ready=rom_complete && bios_complete && !busy;
     always @(posedge clk)begin
         if(reset)begin
             rom_complete<=0;bios_complete<=0;rom_ordered<=0;bios_ordered<=0;
-            rom_next<=0;bios_next<=0;rom_crc<=0;rom_bytes<=0;bios_crc<=0;
+            rom_next_word<=0;bios_next<=0;rom_crc<=0;rom_bytes<=0;bios_crc<=0;
             busy<=0;work_rom<=0;work_last<=0;work_crc<=0;work_data<=0;bits_left<=0;
         end else begin
             if(busy)begin
@@ -37,7 +50,7 @@ module gba_state_identity #(parameter integer BIOS_BYTES=16384)(
                 end
             end
             if(rom_begin)begin
-                rom_bytes<=rom_size;rom_complete<=0;rom_ordered<=0;rom_next<=0;
+                rom_bytes<=rom_size;rom_complete<=0;rom_ordered<=0;rom_next_word<=0;
                 if(busy && work_rom)busy<=0;
             end
             if(rom_write || bios_write)begin
@@ -46,10 +59,10 @@ module gba_state_identity #(parameter integer BIOS_BYTES=16384)(
                 // of these wide register enables avoids a loader-size compare
                 // followed by a high-fanout 32-bit capture enable.
                 work_data<=load_data;work_rom<=rom_write;
-                work_crc<=rom_write ? (rom_offset==0 ? 32'hffffffff : ~rom_crc) :
+                work_crc<=rom_write ? (rom_word==0 ? 32'hffffffff : ~rom_crc) :
                     (bios_offset==0 ? 32'hffffffff : ~bios_crc);
                 bits_left<=rom_write ? {rom_count,3'b000} : 6'd32;
-                work_last<=rom_write ? size-rom_offset<=4 : bios_offset==BIOS_BYTES-4;
+                work_last<=rom_write ? last_rom_word : bios_offset==BIOS_BYTES-4;
                 if(rom_write)rom_complete<=0;
                 if(bios_write)bios_complete<=0;
                 if(busy || (rom_write && bios_write))begin
@@ -59,16 +72,23 @@ module gba_state_identity #(parameter integer BIOS_BYTES=16384)(
                     if(rom_write || (busy && work_rom))begin rom_complete<=0;rom_ordered<=0;end
                     if(bios_write || (busy && !work_rom))begin bios_complete<=0;bios_ordered<=0;end
                 end else if(rom_write)begin
-                    if(size_valid && rom_offset[1:0]==0 && rom_offset<size &&
-                       (rom_offset==0 || (!rom_begin && rom_ordered && rom_offset==rom_next)))begin
+                    // A stream begins at zero and advances one word until
+                    // its last word completes. No ordered stream can reach
+                    // an offset past the image before that completion.
+                    if(size_valid && valid_word_address &&
+                       (rom_word==0 || (!rom_begin && rom_ordered && !rom_complete && rom_word==rom_next_word)))begin
                         busy<=1;
-                        rom_next<=rom_offset+4;rom_ordered<=1;
+                        rom_next_word<=next_rom_word;rom_ordered<=1;
                     end else rom_ordered<=0;
                 end else begin
                     if(bios_offset[1:0]==0 && bios_offset<BIOS_BYTES &&
                        (bios_offset==0 || (bios_ordered && bios_offset==bios_next)))begin
                         busy<=1;
-                        bios_next<=bios_offset+4;bios_ordered<=1;
+                        // A range-checked word advances no further than
+                        // BIOS_BYTES. Retain that terminal offset without a
+                        // full bridge-width incrementer and register bank.
+                        bios_next<=bios_offset[BIOS_NEXT_BITS-1:0]+BIOS_NEXT_BITS'(4);
+                        bios_ordered<=1;
                     end else bios_ordered<=0;
                 end
             end

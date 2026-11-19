@@ -20,8 +20,6 @@ module gba_ewram_cached_psram #(parameter CACHE_WORDS=64,parameter bit SLOW_CLOC
     input wire [63:0] memory_line_data
 );
     localparam INDEX_BITS=$clog2(CACHE_WORDS), TAG_BITS=16-INDEX_BITS;
-    // Only complete physical words are cached. Mirrors share the same tag.
-    // Keep this small flow-through store out of the block-RAM budget.
     initial begin
         if(CACHE_WORDS < 2 || CACHE_WORDS > 65536 || (CACHE_WORDS & (CACHE_WORDS-1)) != 0)
             $error("EWRAM cache capacity must be a power of two from 2 to 65536");
@@ -29,47 +27,72 @@ module gba_ewram_cached_psram #(parameter CACHE_WORDS=64,parameter bit SLOW_CLOC
     localparam IDLE=0,WAIT_BACKEND=1,ACK=2;
     reg [1:0] state;
     reg [CACHE_WORDS-1:0] valid;
-
     (* ramstyle="MLAB, no_rw_check" *) reg [TAG_BITS-1:0] tags[0:CACHE_WORDS-1];
     wire [INDEX_BITS-1:0] index=addr[INDEX_BITS+1:2];
     wire [TAG_BITS-1:0] tag=addr[17:INDEX_BITS+2];
     wire hit=valid[index] && tags[index]==tag;
     reg [31:0] held_addr,held_wdata;
-
     reg [1:0] held_size;
     reg held_write,held_hit;
     reg sibling_pending;
-    // Neighbor admission is a locality hint, never an architectural response.
-    // Writes leave the previous read in place for read/update object loops.
     reg [15:0] previous_read_word;
     reg previous_read_valid,held_stream_read;
+`ifdef GBK_EWRAM_POSTED_WRITE
+    // The posted experiment is intentionally narrow: only full-word cache-hit
+    // stores are acknowledged early. Reads and DMA wait for the physical
+    // write to drain, so no forwarding or ordering window crosses the cache.
+    reg posted_valid;
+    reg [31:0] posted_addr,posted_wdata;
+`endif
     wire adjacent_read=previous_read_valid &&
         (addr[17:2]==previous_read_word+16'd1 || addr[17:2]==previous_read_word-16'd1);
-
 `ifdef GBK_SAVESTATE
-    assign state_idle=state==IDLE && !req && !sibling_pending;
+    assign state_idle=state==IDLE && !req && !sibling_pending
+`ifdef GBK_EWRAM_POSTED_WRITE
+        && !posted_valid
+`endif
+        ;
 `endif
     reg [31:0] sibling_data;
     wire [INDEX_BITS-1:0] held_index=held_addr[INDEX_BITS+1:2];
     wire [TAG_BITS-1:0] held_tag=held_addr[17:INDEX_BITS+2];
-    wire backend_req=(state==IDLE && req && (write || !hit)) || state==WAIT_BACKEND;
+    wire backend_req=(state==IDLE && req && (write || !hit)
+`ifdef GBK_EWRAM_POSTED_WRITE
+        && !posted_valid
+`endif
+        ) || state==WAIT_BACKEND
+`ifdef GBK_EWRAM_POSTED_WRITE
+        || posted_valid
+`endif
+        ;
     wire [31:0] psram_rdata;
     wire psram_ready;
     wire [31:0] backend_rdata=SDRAM_BACKEND ? memory_rdata : psram_rdata;
     wire backend_ready=SDRAM_BACKEND ? memory_ready : psram_ready;
     assign memory_req=SDRAM_BACKEND && backend_req;
-    assign memory_write=state==IDLE ? write : held_write;
-    assign memory_addr=state==IDLE ? addr : held_addr;
-    assign memory_wdata=state==IDLE ? wdata : held_wdata;
-    assign memory_size=state==IDLE ? size : held_size;
+    assign memory_write=
+`ifdef GBK_EWRAM_POSTED_WRITE
+        posted_valid ? 1'b1 :
+`endif
+        state==IDLE ? write : held_write;
+    assign memory_addr=
+`ifdef GBK_EWRAM_POSTED_WRITE
+        posted_valid ? posted_addr :
+`endif
+        state==IDLE ? addr : held_addr;
+    assign memory_wdata=
+`ifdef GBK_EWRAM_POSTED_WRITE
+        posted_valid ? posted_wdata :
+`endif
+        state==IDLE ? wdata : held_wdata;
+    assign memory_size=
+`ifdef GBK_EWRAM_POSTED_WRITE
+        posted_valid ? 2'b10 :
+`endif
+        state==IDLE ? size : held_size;
     reg hit_ready;
-
-    // Physical completion is already registered. Forward it on the same
-    // consuming edge as the original backend; do not add a cache wrapper
-    // cycle to misses or write-through stores.
     assign ready=hit_ready || (state==WAIT_BACKEND && backend_ready);
     assign rdata=state==WAIT_BACKEND ? backend_rdata : cache_read_data;
-    // Preserve pin-traffic observation points used by the shared fixtures.
     // synthesis translate_off
     wire ps_read=backend.ps_read, ps_write=backend.ps_write;
     // synthesis translate_on
@@ -79,14 +102,19 @@ module gba_ewram_cached_psram #(parameter CACHE_WORDS=64,parameter bit SLOW_CLOC
         .size(state==IDLE ? size : held_size),.rdata(psram_rdata),.ready(psram_ready),
         .cram_a,.cram_dq,.cram_wait,.cram_clk,.cram_adv_n,.cram_cre,.cram_ce0_n,.cram_ce1_n,
         .cram_oe_n,.cram_we_n,.cram_ub_n,.cram_lb_n);
-    // The synchronous read samples the request on the existing hit-accept
-    // edge. hit_ready and RAM data become valid together; no cycle is added.
     wire [INDEX_BITS-1:0] cache_read_index=state==IDLE ? index : held_index;
     wire backend_complete=state==WAIT_BACKEND && backend_ready;
     wire neighbor_write=state==ACK && sibling_pending;
     wire data_write=!reset && (neighbor_write ||
+`ifdef GBK_EWRAM_POSTED_WRITE
+        posted_valid ||
+`endif
         (backend_complete && (!held_write || held_size==2 || held_hit)));
-    wire [INDEX_BITS-1:0] data_write_index=neighbor_write ?
+    wire [INDEX_BITS-1:0] data_write_index=
+`ifdef GBK_EWRAM_POSTED_WRITE
+        posted_valid ? posted_addr[INDEX_BITS+1:2] :
+`endif
+        neighbor_write ?
         held_index ^ {{(INDEX_BITS-1){1'b0}},1'b1} : held_index;
     reg [31:0] partial_write_data;
     always @* begin
@@ -100,7 +128,11 @@ module gba_ewram_cached_psram #(parameter CACHE_WORDS=64,parameter bit SLOW_CLOC
             3:partial_write_data={held_wdata[7:0],cache_read_data[23:0]};
         endcase
     end
-    wire [31:0] data_write_word=neighbor_write ? sibling_data : !held_write ? backend_rdata :
+    wire [31:0] data_write_word=
+`ifdef GBK_EWRAM_POSTED_WRITE
+        posted_valid ? posted_wdata :
+`endif
+        neighbor_write ? sibling_data : !held_write ? backend_rdata :
         held_size==2 ? held_wdata : partial_write_data;
     wire [31:0] cache_read_data;
 `ifdef GBK_SIM
@@ -128,7 +160,10 @@ module gba_ewram_cached_psram #(parameter CACHE_WORDS=64,parameter bit SLOW_CLOC
     defparam cache_data_ram.operation_mode="DUAL_PORT";
     defparam cache_data_ram.lpm_type="altsyncram";
     defparam cache_data_ram.intended_device_family="Cyclone V";
-    defparam cache_data_ram.ram_block_type="M10K";
+    // This 64-word cache is deliberately kept in the small embedded-memory
+    // fabric; reserving M10Ks here can make the Pocket design exceed its
+    // device-wide M10K budget.
+    defparam cache_data_ram.ram_block_type="MLAB";
     defparam cache_data_ram.numwords_a=CACHE_WORDS,cache_data_ram.numwords_b=CACHE_WORDS;
     defparam cache_data_ram.widthad_a=INDEX_BITS,cache_data_ram.widthad_b=INDEX_BITS;
     defparam cache_data_ram.width_a=32,cache_data_ram.width_b=32;
@@ -143,32 +178,41 @@ module gba_ewram_cached_psram #(parameter CACHE_WORDS=64,parameter bit SLOW_CLOC
             held_addr<=0;held_wdata<=0;held_size<=0;held_write<=0;held_hit<=0;
             sibling_pending<=0;sibling_data<=0;
             previous_read_word<=0;previous_read_valid<=0;held_stream_read<=0;
+`ifdef GBK_EWRAM_POSTED_WRITE
+            posted_valid<=0;posted_addr<=0;posted_wdata<=0;
+`endif
         end else case(state)
-            IDLE: if(req) begin
+            IDLE: begin
+`ifdef GBK_EWRAM_POSTED_WRITE
+                if(posted_valid) begin
+                    if(backend_ready) posted_valid<=0;
+                end else
+`endif
+                if(req) begin
                 if(BURST_FILL && !write)begin previous_read_word<=addr[17:2];previous_read_valid<=1;end
+`ifdef GBK_EWRAM_POSTED_WRITE
+                if(write && hit && size==2) begin
+                    posted_valid<=1;posted_addr<=addr;posted_wdata<=wdata;hit_ready<=1;
+                end else
+`endif
                 if(!write && hit) begin hit_ready<=1;state<=ACK;end
                 else begin
                     held_addr<=addr;held_wdata<=wdata;held_size<=size;
-
                     held_stream_read<=adjacent_read;
                     held_write<=write;held_hit<=hit;state<=WAIT_BACKEND;
+                end
                 end
             end
             WAIT_BACKEND: if(backend_ready) begin
                 sibling_pending<=SDRAM_BACKEND && BURST_FILL && !held_write && held_stream_read;
                 sibling_data<=held_addr[2] ? memory_line_data[31:0] : memory_line_data[63:32];
-
                 if(!held_write || held_size==2) begin
                     tags[held_index]<=held_tag;valid[held_index]<=1;
                 end
                 state<=ACK;
             end
             ACK: begin
-                // Reuse the existing acknowledgement bubble for the second
-                // cache write. No new request can be accepted before IDLE;
-                // CPU and DMA therefore observe both fills in bus order.
                 if(sibling_pending) begin
-
                     tags[held_index ^ {{(INDEX_BITS-1){1'b0}},1'b1}]<=held_tag;
                     valid[held_index ^ {{(INDEX_BITS-1){1'b0}},1'b1}]<=1;
                 end
@@ -178,4 +222,3 @@ module gba_ewram_cached_psram #(parameter CACHE_WORDS=64,parameter bit SLOW_CLOC
         endcase
     end
 endmodule
-

@@ -29,7 +29,7 @@ module gba_rtc_persistence_link #(parameter integer CLOCK_HZ=74250000)(
 );
     localparam integer WAIT_CYCLES=CLOCK_HZ/10>0 ? CLOCK_HZ/10 : 1;
     localparam integer WAIT_BITS=$clog2(WAIT_CYCLES+1);
-    (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] ack_sync=0;
+    (* preserve, dont_merge, altera_attribute="-name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] ack_sync=0;
     reg inflight=0,stale=0,clear_pending=0,load_pending=0;
     reg snapshot_pending=0,request_seen=0,discard_snapshot=0;
     reg [1:0] load_fetch=0;

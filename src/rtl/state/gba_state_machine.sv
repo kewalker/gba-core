@@ -47,6 +47,9 @@ module gba_state_machine #(
     input wire memory_ready,memory_response,
     input wire [63:0] memory_rdata
 );
+    // reset is a host-clock signal; release guest-clock state in its own domain.
+    wire guest_reset;
+    gba_reset_sync guest_reset_sync(.clk(guest_clk),.reset_in(reset),.reset_out(guest_reset));
     wire freeze_start,freeze_finish,frozen,freeze_done,freeze_request,cpu_hold,domain_frozen;
     wire [2:0] freeze_error;
     wire prepare_hold,freeze_needs_prepare;
@@ -60,7 +63,7 @@ module gba_state_machine #(
         .clk(host_clk),.reset,.start(freeze_start),.finish(freeze_finish),.cancel(1'b0),
         .cpu_quiescent(quiescent_sync[2]),.transactions_drained(quiescent_sync[2]),.resume_ready,
         .domain_frozen,.cpu_hold,.drain_request(),.freeze_request,.frozen,.busy(),.prepare_required(freeze_needs_prepare),.done(freeze_done),.error_code(freeze_error));
-    gba_state_freeze_domain domain(.clk(guest_clk),.reset,.request(freeze_request),
+    gba_state_freeze_domain domain(.clk(guest_clk),.reset(guest_reset),.request(freeze_request),
         .idle(state_cpu_quiescent && state_dma_quiescent && guest_transactions_idle),
         .hold_request(cpu_hold),.frozen(domain_frozen),.execution_hold(state_hold),.prepare_hold);
     assign state_cpu_request=prepare_hold;

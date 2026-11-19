@@ -49,7 +49,9 @@ module arm7tdmi_core #(
     output reg [31:0] state_rdata,
 `endif
     input wire execution_enable,
+`ifdef GBK_CPU_OVERLAP
     output wire [31:0] research_fetch_pc,
+`endif
     output wire timing_code,timing_thumb,timing_exec,timing_irq,
     output reg [3:0] timing_internal_cycles,
     output reg timing_refill,
@@ -238,6 +240,40 @@ module arm7tdmi_core #(
     // ARM data-processing immediate shifts and register-offset transfers
     // are mutually exclusive; use one immediate barrel shifter for both.
     logic [32:0] arm_immediate_result;
+`ifdef GBK_SHARED_ARM_SHIFT
+    // Reverse the operand for LSL so all four operations use one right
+    // barrel. Keep the shifted-out bit in the same network as the result.
+    function automatic [32:0] shift_arm(input [31:0] value,input [7:0] amount,
+        input [1:0] kind,input bit register_count,input carry_in);
+        reg [31:0] reversed,operand,fill;
+        reg [4:0] count;
+        reg [32:0] shifted;
+        reg [31:0] result;
+        reg carry_out;
+        reg left,rrx;
+        begin
+            left=kind==0;
+            rrx=!register_count && amount==0 && kind==3;
+            for(integer bit_index=0;bit_index<32;bit_index=bit_index+1)
+                reversed[bit_index]=value[31-bit_index];
+            operand=left ? reversed : value;
+            fill=kind==2 ? {32{value[31]}} : kind==3 ? value : 32'd0;
+            if(rrx)fill={31'd0,carry_in};
+            count=rrx ? 5'd1 : amount[4:0];
+            shifted={fill,operand,1'b0} >> count;
+            for(integer bit_index=0;bit_index<32;bit_index=bit_index+1)
+                result[bit_index]=left ? shifted[32-bit_index] : shifted[bit_index+1];
+            carry_out=shifted[0];
+            if(amount==0 && (register_count || left))carry_out=carry_in;
+            else if(kind==3 && count==0)carry_out=value[31];
+            else if(kind!=3 && ((amount==0 && !left) || amount>=32))begin
+                result=kind==2 ? {32{value[31]}} : 32'd0;
+                carry_out=kind==2 || (kind==1 && amount<=32) ? value[31] : left && amount==32 && value[0];
+            end
+            shift_arm={carry_out,result};
+        end
+    endfunction
+`else
     function automatic [32:0] shift_immediate(input [31:0] value,input [4:0] amount,input [1:0] kind,input carry_in);
         reg [31:0] shifted;
         reg carry_out;
@@ -255,6 +291,7 @@ module arm7tdmi_core #(
             shift_immediate={carry_out,shifted};
         end
     endfunction
+`endif
     function automatic [31:0] read_rm_with_pc(input [31:0] pc_value);
         read_rm_with_pc=fetched_rm_pc ? pc_value : fetched_rm_value;
     endfunction
@@ -269,6 +306,35 @@ module arm7tdmi_core #(
     end endgenerate
 `else
     logic [31:0] user_high_bank[0:4],fiq_high_bank[0:4];
+`endif
+`ifdef GBK_CPU_OVERLAP
+`ifndef GBK_SAVESTATE
+    // The overlap path also serves the production no-save-state recipe. Keep
+    // only its three transient fetch captures when the shared save-state
+    // register-read implementation is not compiled.
+    reg [11:0] fetched_read_indices;
+    reg [31:0] fetched_rm_value;
+    reg fetched_rm_pc;
+    function automatic [11:0] decode_read_indices(input [31:0] word_value,input thumb_value,halfword);
+        reg [15:0] t;
+        reg [3:0] rn_value,rm_value,rs_value;
+        begin
+            t=halfword ? word_value[31:16] : word_value[15:0];
+            rn_value=thumb_value ? {(t[15:10]==6'b010001 && t[6]),t[5:3]} : word_value[19:16];
+            rm_value=thumb_value ? {(t[15:10]==6'b010001 && t[7]),t[2:0]} : word_value[3:0];
+            if(thumb_value && (t[15:13]==3'b001 || t[15:12]==4'b1100))rm_value={1'b0,t[10:8]};
+            rs_value=thumb_value ? {1'b0,t[8:6]} : word_value[11:8];
+            decode_read_indices={rn_value,rm_value,rs_value};
+        end
+    endfunction
+    function automatic [3:0] decode_rm_index(input [31:0] word_value,input thumb_value,halfword);
+        reg [11:0] indices;
+        begin
+            indices=decode_read_indices(word_value,thumb_value,halfword);
+            decode_rm_index=indices[7:4];
+        end
+    endfunction
+`endif
 `endif
     reg high_switch_enable,high_switch_fiq,bank_save_enable,bank_restore_enable,bank_restore_lr;
     reg [4:0] high_new_mode,bank_restore_mode;
@@ -357,6 +423,11 @@ module arm7tdmi_core #(
     logic        instr_fetch_pending;
     logic        alu_carry, alu_overflow, shift_carry;
     logic [32:0] add_ext;
+`ifdef GBK_SHARED_ARM_ADD
+    logic [32:0] arm_sum;
+    logic arm_subtract,arm_reverse,arm_carry_in,arm_halfword_offset;
+    logic [31:0] arm_add_operand;
+`endif
     logic [31:0] thumb_alu_result;
     logic [31:0] thumb_shift_result;
     logic        thumb_alu_carry;
@@ -591,8 +662,7 @@ module arm7tdmi_core #(
     // waiting for memory. DMA can discard that memory-side read and require
     // a retry. Dropping valid would then leave both IRQ entry and the fetch
     // waiting forever, even after DMA releases the bus.
-    // PRIVATE RESEARCH: no speculative memory outside IWRAM; only instructions
-    // guaranteed to advance PC without starting a transfer or switching banks.
+`ifdef GBK_CPU_OVERLAP
     wire [31:0] overlap_pc=r[15]+(thumb ? 32'd2 : 32'd4);
     wire arm_overlap_safe=!arm_undefined && instr[27:26]==0 && rd!=15 &&
         (instr[25] || !instr[4]) &&
@@ -610,19 +680,36 @@ module arm7tdmi_core #(
         r[15][31:24]==3 && overlap_pc[31:24]==3 &&
         (thumb ? thumb_overlap_safe : arm_overlap_safe);
     assign research_fetch_pc=overlap_issue ? overlap_pc : r[15];
-    // Address may change while no request is issued. Keep opcode eligibility
-    // out of the address -> cache tag -> read data -> operand capture path.
     wire [31:0] overlap_address_pc=exec_pending ? overlap_pc : r[15];
+`endif
     assign bus_valid  = !reset && !halted && (data_cycle || block_cycle ||
-                                  (overlap_issue || (!exec_pending && (fetch_enabled || instr_fetch_pending) && (!irq_pending || instr_fetch_pending))));
+`ifdef GBK_CPU_OVERLAP
+                                  overlap_issue ||
+`endif
+                                  (!exec_pending && (fetch_enabled || instr_fetch_pending) && (!irq_pending || instr_fetch_pending)));
     assign bus_write  = swap_active ? swap_write_phase : block_cycle ? !block_load : (data_cycle && !data_load);
-    assign bus_size   = block_cycle ? 2'b10 : (data_byte ? 2'b00 : (data_half ? 2'b01 : 2'b10));
+    // Fetches return the aligned instruction word in both ARM and Thumb.
+    // Data width persists after a load/store and must tag only that cycle.
+    assign bus_size   = !data_cycle || block_cycle ? 2'b10 :
+                        (data_byte ? 2'b00 : (data_half ? 2'b01 : 2'b10));
 `ifdef GBK_SAVESTATE
     // Timed SWP already owns data_cycle and its registered transfer address.
     // Avoid a redundant swap-mode mux before the memory cache-hit/ready path.
     generate if(TIMED_EXECUTION)begin: timed_bus_address
         assign bus_addr=block_cycle ? block_addr : data_cycle ? transfer_addr :
-            (thumb ? {overlap_address_pc[31:2],2'b00} : overlap_address_pc);
+            (thumb ? {
+`ifdef GBK_CPU_OVERLAP
+                overlap_address_pc[31:2]
+`else
+                r[15][31:2]
+`endif
+                ,2'b00} :
+`ifdef GBK_CPU_OVERLAP
+                overlap_address_pc
+`else
+                r[15]
+`endif
+            );
     end else begin: legacy_bus_address
         assign bus_addr=swap_active ? transfer_addr : block_cycle ? block_addr :
             (data_cycle ? (data_thumb || data_pre ? alu_result : `GBK_RF_POSTBASE) :
@@ -702,8 +789,16 @@ module arm7tdmi_core #(
 `ifdef GBK_SAVESTATE
         arm_register_shift=instr[11:8]==15 ? 8'(r[15]+32'd8) : shared_raw_rs[7:0];
         arm_shift_value=arm_rm_value;
+`ifdef GBK_SHARED_ARM_SHIFT
+        // Address offsets always use the immediate-count form, including
+        // their distinct PC operand. Data processing can take Rs as count.
+        arm_immediate_result=shift_arm(instr[27:26]==2'b01 ? shared_raw_rm : arm_rm_value,
+            instr[27:26]!=2'b01 && instr[4] ? arm_register_shift : {3'd0,instr[11:7]},
+            instr[6:5],instr[27:26]!=2'b01 && instr[4],cpsr[29]);
+`else
         arm_immediate_result=shift_immediate(instr[27:26]==2'b01 ? shared_raw_rm : arm_rm_value,
             instr[11:7],instr[6:5],cpsr[29]);
+`endif
 `else
         arm_register_shift = 8'(read_with_pc(instr[11:8],r[15]+32'd8));
         // Rm reads PC+12 for register-controlled data-processing shifts.
@@ -759,6 +854,9 @@ module arm7tdmi_core #(
         end else begin
             op2 = arm_rm_value;
             rotate_amount = 0;
+`ifdef GBK_SHARED_ARM_SHIFT
+            op2=arm_immediate_result[31:0];shift_carry=arm_immediate_result[32];
+`else
             if (!instr[4]) begin
 `ifdef GBK_SAVESTATE
                 op2=arm_immediate_result[31:0];shift_carry=arm_immediate_result[32];
@@ -820,8 +918,34 @@ module arm7tdmi_core #(
                     endcase
                 end
             end
+`endif
         end
+`ifdef GBK_SHARED_ARM_ADD
+        arm_halfword_offset=!thumb && instr[27:25]==3'b000 && instr[7] && instr[4] && instr[6:5]!=0;
+        arm_reverse=!arm_halfword_offset && instr[27:26]!=2'b01 &&
+            (instr[24:21]==3 || instr[24:21]==7);
+        arm_subtract=instr[24:21]==2 || instr[24:21]==6 || instr[24:21]==10 || arm_reverse;
+        arm_carry_in=(instr[24:21]>=5 && instr[24:21]<=7) ? cpsr[29] : arm_subtract;
+        arm_add_operand=op2;
+        if(arm_halfword_offset || instr[27:26]==2'b01)begin
+            arm_subtract=!instr[23];arm_carry_in=!instr[23];
+            if(arm_halfword_offset)
+                arm_add_operand=instr[22] ? {24'd0,instr[11:8],instr[3:0]} : `GBK_RF_RAW_RM;
+            else if(!instr[25])arm_add_operand={20'd0,instr[11:0]};
+`ifdef GBK_SAVESTATE
+            else arm_add_operand=arm_immediate_result[31:0];
+`endif
+        end
+        // Reverse subtraction complements Rn rather than swapping the
+        // carry-chain inputs, since addition is commutative.
+        arm_sum=add_with_carry(arm_rn_value ^ {32{arm_reverse}},
+            arm_add_operand ^ {32{arm_subtract && !arm_reverse}},arm_carry_in);
+`endif
         if (instr[27:26] == 2'b01) begin
+`ifdef GBK_SHARED_ARM_ADD
+            data_offset=arm_add_operand;
+            alu_result=arm_sum[31:0];
+`else
             data_offset = {20'b0, instr[11:0]};
             if (instr[25]) begin
 `ifdef GBK_SAVESTATE
@@ -848,6 +972,7 @@ module arm7tdmi_core #(
             end
             alu_result = instr[23] ? arm_rn_value + data_offset
                                    : arm_rn_value - data_offset;
+`endif
         end else begin
             alu_carry = shift_carry;
             case (instr[24:21])
@@ -857,19 +982,25 @@ module arm7tdmi_core #(
                 // the less common forms as no-ops.
                 4'b0000: alu_result = arm_rn_value & op2; // AND
                 4'b0001: alu_result = arm_rn_value ^ op2;
+`ifdef GBK_SHARED_ARM_ADD
+                4'd2,4'd3,4'd4,4'd5,4'd6,4'd7,4'd10,4'd11:begin
+                    alu_result=arm_sum[31:0];alu_carry=arm_sum[32];
+                end
+`else
                 4'b0010: begin alu_result = arm_rn_value - op2; alu_carry = arm_rn_value >= op2; end // SUB
                 4'b0011: begin alu_result = op2 - arm_rn_value; alu_carry = op2 >= arm_rn_value; end // RSB
                 4'b0100: begin add_ext = {1'b0, arm_rn_value} + {1'b0, op2}; alu_result = add_ext[31:0]; alu_carry = add_ext[32]; end
                 4'b0101: begin add_ext = add_with_carry(arm_rn_value,op2,cpsr[29]); alu_result = add_ext[31:0]; alu_carry = add_ext[32]; end
                 4'b0110: begin add_ext = add_with_carry(arm_rn_value,~op2,cpsr[29]); alu_result = add_ext[31:0]; alu_carry = add_ext[32]; end // SBC
                 4'b0111: begin add_ext = add_with_carry(op2,~arm_rn_value,cpsr[29]); alu_result = add_ext[31:0]; alu_carry = add_ext[32]; end // RSC
+                4'b1010: begin alu_result = arm_rn_value - op2; alu_carry = arm_rn_value >= op2; end
+                4'b1011: begin add_ext = {1'b0, arm_rn_value} + {1'b0, op2}; alu_result = add_ext[31:0]; alu_carry = add_ext[32]; end // CMN
+`endif
                 4'b1000: alu_result = arm_rn_value & op2; // TST
                 4'b1001: alu_result = arm_rn_value ^ op2; // TEQ
                 4'b1100: alu_result = arm_rn_value | op2;
                 4'b1110: alu_result = arm_rn_value & ~op2;
                 4'b1101: alu_result = op2;
-                4'b1010: begin alu_result = arm_rn_value - op2; alu_carry = arm_rn_value >= op2; end
-                4'b1011: begin add_ext = {1'b0, arm_rn_value} + {1'b0, op2}; alu_result = add_ext[31:0]; alu_carry = add_ext[32]; end // CMN
                 4'b1111: alu_result = ~op2; // MVN
                 default: alu_result = arm_rn_value;
             endcase
@@ -896,6 +1027,12 @@ module arm7tdmi_core #(
         // ARM halfword transfer addressing (LDRH/STRH).  The ARM encoding
         // uses the otherwise-unallocated 000 space with H=1 and S=0; the
         // offset is either Rm or the split immediate in bits 11:8 and 3:0.
+`ifdef GBK_SHARED_ARM_ADD
+        if(arm_halfword_offset)begin
+            op2=arm_add_operand;
+            alu_result=arm_sum[31:0];
+        end
+`else
         if (!thumb && instr[27:25] == 3'b000 &&
             (instr[7:4] == 4'b1011 || instr[7:4] == 4'b1101 || instr[7:4] == 4'b1111)) begin
             if (instr[22])
@@ -904,6 +1041,7 @@ module arm7tdmi_core #(
                 op2 = `GBK_RF_RAW_RM;
             alu_result = instr[23] ? arm_rn_value + op2 : arm_rn_value - op2;
         end
+`endif
 
         if (thumb) begin
             // Thumb load/store address and attributes are decoded when the
@@ -953,6 +1091,12 @@ module arm7tdmi_core #(
             case (thumb_instr[9:6])
                 4'b0000: thumb_alu_result = `GBK_RF_THUMB_RD & `GBK_RF_THUMB_RS;
                 4'b0001: thumb_alu_result = `GBK_RF_THUMB_RD ^ `GBK_RF_THUMB_RS;
+`ifdef GBK_SHARED_THUMB_SHIFT
+                4'd2,4'd3,4'd4,4'd7:begin
+                    {thumb_alu_carry,thumb_alu_result}=shift_arm(`GBK_RF_THUMB_RD,`GBK_RF_THUMB_RS[7:0],
+                        {thumb_instr[8],thumb_instr[6]},1'b1,cpsr[29]);
+                end
+`else
                 4'b0010: begin
                     // Register counts use Rs[7:0], not Rs[4:0]. Zero
                     // preserves C; exactly 32 and greater counts differ.
@@ -979,6 +1123,7 @@ module arm7tdmi_core #(
                             `GBK_RF_THUMB_RD[`GBK_RF_THUMB_RS[7:0]-1] : `GBK_RF_THUMB_RD[31];
                     end
                 end
+`endif
                 4'b0101: begin
                     add_ext = add_with_carry(`GBK_RF_THUMB_RD,`GBK_RF_THUMB_RS,cpsr[29]);
                     thumb_alu_result = add_ext[31:0]; thumb_alu_carry = add_ext[32];
@@ -991,6 +1136,7 @@ module arm7tdmi_core #(
                     thumb_alu_overflow = (`GBK_RF_THUMB_RD[31] != `GBK_RF_THUMB_RS[31]) &&
                                          (thumb_alu_result[31] != `GBK_RF_THUMB_RD[31]);
                 end
+`ifndef GBK_SHARED_THUMB_SHIFT
                 4'b0111: begin
                     if (`GBK_RF_THUMB_RS[7:0] != 0) begin
                         thumb_alu_result = (`GBK_RF_THUMB_RD >> `GBK_RF_THUMB_RS[4:0]) |
@@ -1000,6 +1146,7 @@ module arm7tdmi_core #(
                         thumb_alu_carry = thumb_alu_result[31];
                     end
                 end
+`endif
                 4'b1000: thumb_alu_result = `GBK_RF_THUMB_RD & `GBK_RF_THUMB_RS; // TST
                 4'b1001: begin // NEG
                     thumb_alu_result = 32'b0 - `GBK_RF_THUMB_RS;
@@ -1882,10 +2029,13 @@ module arm7tdmi_core #(
                     data_writeback <= !instr[24] || instr[21];
                     data_base_reg <= instr[19:16];
                 end else if (instr[27:26] == 2'b00) begin
-                    if (instr[24:21] != 4'b1010 && instr[24:21] != 4'b1000 &&
-                        instr[24:21] != 4'b1001 && instr[24:21] != 4'b1011 &&
-                        instr[15:12] != 4'hF)
-                        write_main(rd,alu_result);
+                    r[15] <= r[15] + 4;
+                    if (instr[24:21] < 8 || instr[24:21] > 11) begin
+                        // A data-processing write to PC branches in ARM state.
+                        // Privileged writes with S set use return_exception above.
+                        if (rd == 15) r[15] <= {alu_result[31:2],2'b00};
+                        else write_main(rd,alu_result);
+                    end
                     if (instr[20] || instr[24:21] == 4'b1010 ||
                         instr[24:21] == 4'b1000 || instr[24:21] == 4'b1001 ||
                         instr[24:21] == 4'b1011) begin
@@ -1898,7 +2048,6 @@ module arm7tdmi_core #(
                             instr[24:21] == 4'b1010 || instr[24:21] == 4'b1011)
                             cpsr[28] <= alu_overflow;
                     end
-                    r[15] <= r[15] + 4;
                 end else if (instr[27:26] == 2'b01) begin
                     debug_data_instr <= instr;
                     data_cycle <= 1'b1;
@@ -1922,9 +2071,10 @@ module arm7tdmi_core #(
                 r[15] <= r[15] + 4;
         end
         end
-        // Existing execution above must retire before the next opcode replaces
-        // instr_reg. Forward its ordinary destination to the saved Rm operand.
-        // Rn/Rs read the updated live register file on the following clock.
+`ifdef GBK_CPU_OVERLAP
+        // The retiring instruction has already computed its normal write mux.
+        // Forward that result only for the next opcode's saved Rm operand;
+        // Rn/Rs are read from the updated register file on the next cycle.
         if(overlap_issue)begin
             if(bus_ready)begin
                 instr_reg<=bus_rdata;
@@ -1937,6 +2087,7 @@ module arm7tdmi_core #(
                 instr_fetch_pending<=0;
             end else instr_fetch_pending<=1;
         end
+`endif
         if(bank_save_enable)case(cpsr[4:0])
             5'h11:begin fiq_sp_bank<=bank_save_sp;fiq_lr_bank<=bank_save_lr;end
             5'h12:begin irq_sp_bank<=bank_save_sp;irq_lr_bank<=bank_save_lr;end

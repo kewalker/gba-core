@@ -64,6 +64,7 @@ def main():
         for name in ('installation.md', 'known-issues.md', 'build.md',
                      'build-validation.md', 'build-validation-receipt.json', 'build-validation-20261104-receipt.json',
                      'build-validation-wario-receipt.json', 'build-validation-0.1.2-receipt.json',
+                     'build-validation-0.2.0-receipt.json',
                      'source-attribution-inventory.json'):
             shutil.copyfile(ROOT / 'docs' / name, package / 'docs' / name)
         shutil.copyfile(ROOT / 'docs/package-readme.md', package / 'README.md')

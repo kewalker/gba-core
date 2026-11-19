@@ -36,16 +36,18 @@ module gba_gamepak_prefetch(
  wire [6:0] needed=word_access ? {2'd0,request_cost,1'b0} : {3'd0,request_cost};
  wire [7:0] capacity={1'b0,stream_cost,3'b000};
  wire [7:0] grown={1'b0,credit}+opportunity;
- wire [6:0] remainder=needed>credit ? needed-credit : 0;
+ // One signed difference supplies both the fetch deficit and remaining
+ // credit. A usable stream only charges the deficit when it is negative.
+ wire [7:0] credit_delta={1'b0,credit}-{1'b0,needed};
+ wire credit_short=credit_delta[7];
  // A complete prefetched opcode takes one CPU cycle. A partial fetch waits
  // only for the unfinished halfword service. Keep a strictly positive charge.
- assign charge=code_access && usable ? (remainder==0 ? 6'd1 : remainder[5:0]) : ordinary_charge;
- wire [6:0] remaining_credit=credit>=needed ? credit-needed : 0;
+ assign charge=code_access && usable ? (credit_short ? -credit_delta[5:0] : 6'd1) : ordinary_charge;
  // On a buffered hit the cartridge bus is free during the one CPU delivery
  // cycle, allowing one cycle of work on the following halfword.
- wire [7:0] after_hit={1'b0,remaining_credit}+1'b1;
+ wire [6:0] after_hit=credit_delta[6:0]+1'b1;
  wire [25:0] following=address[26:1]+(word_access ? 26'd2 : 26'd1);
- wire [6:0] new_credit=after_hit>capacity ? capacity[6:0] : after_hit[6:0];
+ wire [6:0] new_credit=credit_delta[6:0]>=capacity[6:0] ? capacity[6:0] : after_hit;
  assign state_bits=image;
  always @(posedge clk) begin
   if(reset) image<=0;
@@ -58,7 +60,7 @@ module gba_gamepak_prefetch(
     image[33:0]<=0;
    end else if(code_access) begin
     image[25:0]<=following;image[33]<=rom && following[25:23]<6;
-    image[32:26]<=rom && following[25:23]<6 && usable && credit>=needed ? new_credit : 0;
+    image[32:26]<=rom && following[25:23]<6 && usable && !credit_short ? new_credit : 0;
    end else if(valid && opportunity!=0) begin
     image[32:26]<=grown>capacity ? capacity[6:0] : grown[6:0];
    end

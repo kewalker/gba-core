@@ -301,6 +301,12 @@ module gba_system_top #(
 
     logic ppu_pixel_ce;
     wire execution_clk=FAST_CPU ? cpu_clk : clk;
+    // The guest reset is formed in the host clock domain. Release it through
+    // a synchronizer per guest clock so each domain leaves reset on one edge.
+    wire reset_exec,reset_video,reset_render;
+    gba_reset_sync exec_reset_sync(.clk(execution_clk),.reset_in(reset),.reset_out(reset_exec));
+    gba_reset_sync video_reset_sync(.clk(clk),.reset_in(reset),.reset_out(reset_video));
+    gba_reset_sync render_reset_sync(.clk(fast_clk),.reset_in(reset),.reset_out(reset_render));
     wire raw_stopped,stop_resync_pause,stop_resync_blank;
     wire [16:0] guest_display_position,host_display_position;
 `ifdef GBK_SAVESTATE
@@ -309,7 +315,7 @@ module gba_system_top #(
     (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *)
         reg [2:0] state_rom_idle_sync;
     always @(posedge execution_clk)begin
-        if(reset)state_rom_idle_sync<=0;
+        if(reset_exec)state_rom_idle_sync<=0;
         else state_rom_idle_sync<={state_rom_idle_sync[1:0],state_rom_memory_idle};
     end
     // All terms are execution-clock signals. The physical ROM owner reports
@@ -326,9 +332,9 @@ module gba_system_top #(
     generate if(FAST_CPU && NATIVE_TIMING) begin : native_stop_alignment
         gba_stop_resync alignment(.cpu_clk(execution_clk),.video_clk(clk),
 `ifdef GBK_SAVESTATE
-            .reset(reset || (state_hold===1'b1)),
+            .reset(reset_exec || (state_hold===1'b1)),
 `else
-            .reset,
+            .reset(reset_exec),
 `endif
 `ifdef GBK_FAST_FORWARD
             .raw_stop(raw_stopped || fast_forward_realign===1'b1),.guest_position(guest_display_position),
@@ -343,7 +349,7 @@ module gba_system_top #(
     end endgenerate
     (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] stop_video_sync;
     always @(posedge fast_clk) begin
-        if(reset) stop_video_sync<=0;
+        if(reset_render) stop_video_sync<=0;
         else stop_video_sync<={stop_video_sync[0],guest_stopped};
     end
     wire [8:0] guest_video_r,guest_video_g,guest_video_b;
@@ -359,7 +365,7 @@ module gba_system_top #(
 `endif
     logic [23:0] pixel_phase;
     always_ff @(posedge fast_clk) begin
-        if (reset) begin
+        if (reset_render) begin
             pixel_phase <= 0;
             ppu_pixel_ce <= 1'b0;
         end else if (RENDER_SCHEDULER) begin
@@ -404,7 +410,7 @@ module gba_system_top #(
         .state_bulk_valid,.state_bulk_write,.state_bulk_response_ready,.state_bulk_addr,.state_bulk_wdata,
         .state_bulk_ready,.state_bulk_response,.state_bulk_error,.state_bulk_busy,.state_bulk_rdata,
 `endif
-        .clk(execution_clk), .render_clk(fast_clk), .reset,.guest_stopped,
+        .clk(execution_clk), .render_clk(fast_clk), .reset(reset_exec),.guest_stopped,
 `ifdef GBK_FAST_FORWARD
         .fast_forward,
         .fast_forward_speed,
@@ -531,7 +537,7 @@ module gba_system_top #(
     initial if((SDRAM_EWRAM && !EXTERNAL_EWRAM) || (SDRAM_ROM && !EXTERNAL_CARTRIDGE))
         $error("SDRAM backend requires the external-memory bus contract");
     generate if(SDRAM_EWRAM) begin : sdram_ewram_bridge
-        gba_sdram_cdc bridge(.client_clk(execution_clk),.memory_clk(cart_load_clk),.reset(sdram_reset),.client_reset(reset),
+        gba_sdram_cdc bridge(.client_clk(execution_clk),.memory_clk(cart_load_clk),.reset(sdram_reset),.client_reset(reset_exec),
 `ifdef GBK_SAVESTATE
             .state_client_idle(state_ram_cdc_idle),
 `endif
@@ -583,7 +589,7 @@ module gba_system_top #(
     generate
         if (EXTERNAL_CARTRIDGE) begin : external_cartridge
             // 8 KiB ROM cache; native timing and physical read latency stay unchanged.
-            gba_cartridge_psram #(.CACHE_WORDS(4096),.PAIR_READS(1),.PROFILE_ROM(ROM_PROFILE),.FAST_READ_ISSUE(1),
+            gba_cartridge_psram #(.CACHE_WORDS(2048),.PAIR_READS(1),.PROFILE_ROM(ROM_PROFILE),.FAST_READ_ISSUE(1),
                 .READ_WAIT_CYCLES(ROM_READ_WAIT_CYCLES),.SDRAM_BACKEND(SDRAM_ROM),
                 .SDRAM_DIRECT_BURST(ROM_DIRECT_BURST),.SDRAM_FILL_NEIGHBOR(ROM_FILL_NEIGHBOR)) cartridge (
                 // APF loads the cartridge while the emulated CPU is held
@@ -596,7 +602,7 @@ module gba_system_top #(
                 .load_wdata(cart_load_wdata),
                 .cpu_clk(execution_clk), .cpu_req(cart_req), .cpu_addr(cart_addr),
                 .cpu_streaming(cart_streaming),
-                .profile_reset(reset),.debug_profile(debug_rom_profile),
+                .profile_reset(reset_exec),.debug_profile(debug_rom_profile),
                 .cpu_rdata(cart_rdata), .cpu_ready(cart_ready),
                 .cram_a, .cram_dq, .cram_wait,
                 .cram_clk, .cram_adv_n, .cram_cre,
@@ -637,7 +643,7 @@ module gba_system_top #(
         if (EXTERNAL_EWRAM) begin : external_ewram
             // execution_clk is 39.936 MHz (fast CPU) or 12.288 MHz (legacy).
             gba_ewram_cached_psram #(.CACHE_WORDS(64),.SLOW_CLOCK(1),.SDRAM_BACKEND(SDRAM_EWRAM),.BURST_FILL(EWRAM_BURST_FILL)) ewram (
-                .clk(execution_clk), .reset, .req(ewram_req), .write(ewram_write),
+                .clk(execution_clk), .reset(reset_exec), .req(ewram_req), .write(ewram_write),
 `ifdef GBK_SAVESTATE
                 .state_idle(state_ewram_idle),
 `endif
@@ -685,7 +691,7 @@ module gba_system_top #(
         .state_render_invalidate(state_render_invalidate),
 `endif
         .video_skip,.raster_position(host_display_position),
-        .clk(clk), .reset,
+        .clk(clk), .reset(reset_video),
         .render_clk(RENDER_SCHEDULER ? fast_clk : clk),
         .pixel_ce(ppu_pixel_ce),
         .vram_write(ppu_vram_write),

@@ -1,7 +1,7 @@
 # GBA by BitBird
 
 A Game Boy Advance compatible openFPGA core for Analogue Pocket. Version
-**0.1.2**, package identity **BitBird.GBA**, logo **EZ**.
+**0.2.0**, package identity **BitBird.GBA**, logo **EZ**.
 
 ## Features
 
@@ -12,6 +12,7 @@ A Game Boy Advance compatible openFPGA core for Analogue Pocket. Version
 - Optional clock, session-time and total-playtime overlays with six positions;
   playtime uses days/hours/minutes, hiding days below 24 hours.
 - Pocket LCD/CRT display modes for the native 240x160, 3:2 picture.
+- Optional Soft Colors: a mild, persistent desaturation in the core menu.
 
 Cable multiplayer is experimental. See [known limitations](docs/known-issues.md)
 for support boundaries; compatibility is not an exhaustive all-games claim.
@@ -30,7 +31,7 @@ have separate persistent settings. Keep ordinary game saves and card backups.
 
 Use Python 3.10+ and Quartus Prime Lite 18.1 with Cyclone V support.
 The [build guide](docs/build.md) covers isolated builds and timing checks.
-The 0.1.2 full-feature build passed fitted timing and all 21 physical audits.
+The 0.2.0 full-feature build passed fitted timing and all 23 physical audits.
 See [validation](docs/build-validation.md) for build and playtest scope.
 
 `python scripts/package-release.py --output build/package-01 --repository-url https://github.com/kewalker/gba-core`

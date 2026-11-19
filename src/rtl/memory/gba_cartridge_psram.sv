@@ -29,7 +29,7 @@ module gba_cartridge_psram #(
     input wire profile_reset,
     output wire [319:0] debug_profile,
     output logic [31:0] cpu_rdata,
-    output wire cpu_ready,
+    output logic        cpu_ready,
     output logic [21:16] cram_a,
     inout  wire  [15:0] cram_dq,
     input  wire         cram_wait,
@@ -47,14 +47,6 @@ module gba_cartridge_psram #(
     output wire [3:0] memory_byteena,input wire response_valid,
     output wire response_ready,input wire [63:0] response_data
 );
-`ifdef GBK_FAST_FORWARD
-    // Complete once on the acceptance edge; held requests cannot re-ACK.
-    wire retained_fast_ready=!reset && accepted_request && retained_match;
-    assign cpu_ready=cpu_ready_reg || retained_fast_ready;
-`else
-    assign cpu_ready=cpu_ready_reg;
-`endif
-    logic cpu_ready_reg;
     localparam integer ROM_WORD_BITS=SDRAM_BACKEND ? 23 : 22;
     logic psram_write, psram_read, psram_busy, psram_valid;
     logic [1:0] psram_bank;
@@ -130,6 +122,9 @@ module gba_cartridge_psram #(
     reg [ENTRY_BITS*LINE_WORDS-1:0] cache_lookup,accepted_line_data;
     wire [ENTRY_BITS-33:0] lookup_tag;
     wire [31:0] lookup_data;
+    // CPU-side state is released by the loader reset; bring it into cpu_clk.
+    wire cpu_reset;
+    gba_reset_sync cpu_reset_sync(.clk(cpu_clk),.reset_in(reset),.reset_out(cpu_reset));
     generate if(PAIR_MODE) begin : paired_cache
         assign lookup_tag=req_addr_hold[2] ? cache_lookup[ENTRY_BITS+32+:ENTRY_BITS-32] : cache_lookup[32+:ENTRY_BITS-32];
         assign lookup_data=req_addr_hold[2] ? cache_lookup[ENTRY_BITS+:32] : cache_lookup[31:0];
@@ -183,9 +178,9 @@ module gba_cartridge_psram #(
     generate if(PROFILE_ROM) begin : rom_profiling
         reg streaming_request;
         always @(posedge cpu_clk)
-            if(reset || profile_reset) streaming_request<=0;
+            if(cpu_reset || profile_reset) streaming_request<=0;
             else if(accepted_request) streaming_request<=cpu_streaming;
-        gba_rom_profiler #(.PHYSICAL_READ_UNITS(SDRAM_BACKEND ? 4 : 1)) monitor(.cpu_clk,.memory_clk(load_clk),.reset(reset || profile_reset),
+        gba_rom_profiler #(.PHYSICAL_READ_UNITS(SDRAM_BACKEND ? 4 : 1)) monitor(.cpu_clk,.memory_clk(load_clk),.reset(cpu_reset || profile_reset),
             .request_event(accepted_request),.retained_event(accepted_request && retained_match),
             .cache_hit_event(cache_pending && cache_match),.miss_event(profile_miss),
             .stream_miss_event(profile_miss && (cache_pending ? streaming_request : cpu_streaming)),
@@ -202,7 +197,7 @@ module gba_cartridge_psram #(
         cache_lookup_valid <= !cache_clearing && lookup_valid_bits[lookup_index & 31];
     end
     always_ff @(posedge cpu_clk) begin
-        if(reset || epoch_sync2!=epoch_seen) begin
+        if(cpu_reset || epoch_sync2!=epoch_seen) begin
             cache_clearing<=1;
             clear_group<=0;
         end else if(cache_clearing) begin
@@ -411,8 +406,8 @@ module gba_cartridge_psram #(
 
     // CPU-domain request/response handshake.
     always_ff @(posedge cpu_clk) begin
-        if (reset) begin
-            cpu_ready_reg <= 1'b0;
+        if (cpu_reset) begin
+            cpu_ready <= 1'b0;
             cpu_rdata <= 0;
             req_toggle <= 1'b0;
             req_addr_hold <= 0;
@@ -435,7 +430,7 @@ module gba_cartridge_psram #(
             cache_pending<=0;accepted_cache_ready<=0;accepted_valid_word<=0;
             epoch_sync1<=0;epoch_sync2<=0;epoch_seen<=0;accepted_epoch<=0;
         end else begin
-        cpu_ready_reg <= 1'b0;
+        cpu_ready <= 1'b0;
         resp_sync1 <= resp_toggle_mem;
         resp_sync2 <= resp_sync1;
         // Qualify the two-stage data bus only after its settling interval.
@@ -456,7 +451,7 @@ module gba_cartridge_psram #(
 `ifdef GBK_SIM
         if (cpu_req) begin
             cpu_rdata <= sim_rom[cpu_addr[17:2]];
-            cpu_ready_reg <= 1'b1;
+            cpu_ready <= 1'b1;
         end
 `else
         if (!cpu_req) req_seen_cpu <= 1'b0;
@@ -492,12 +487,7 @@ module gba_cartridge_psram #(
                 // Consecutive Thumb instructions share this 32-bit word.
                 // Reuse the settled CPU-domain response, without another CDC
                 // round trip and two physical halfword reads.
-`ifdef GBK_FAST_FORWARD
-                // The combinational acceptance already completed this read.
-                cpu_ready_reg<=0;
-`else
-                cpu_ready_reg<=1;
-`endif
+                cpu_ready<=1;
             end else begin
                 // A request accepted on the invalidation edge must not use
                 // the old synchronous lookup, whose valid bit was sampled
@@ -516,7 +506,7 @@ module gba_cartridge_psram #(
                lookup_tag==req_addr_hold[ROM_WORD_BITS+1:2+CACHE_BITS] &&
                accepted_cache_ready && !cache_clearing &&
                accepted_epoch==epoch_seen && epoch_sync2==epoch_seen) begin
-                cpu_rdata<=lookup_data;cpu_ready_reg<=1;
+                cpu_rdata<=lookup_data;cpu_ready<=1;
                 cpu_waiting<=0;cached_word_valid<=1;
             end else begin
                 cached_word_valid<=0;
@@ -532,7 +522,7 @@ module gba_cartridge_psram #(
         if (resp_sync3 != resp_seen_cpu) begin
             resp_seen_cpu <= resp_sync3;
             cpu_rdata <= PAIR_MODE && req_addr_hold[2] ? {resp_pair_high_sync2,resp_pair_low_sync2} : {resp_high_sync2,resp_low_sync2};
-            cpu_ready_reg <= 1'b1;
+            cpu_ready <= 1'b1;
             cpu_waiting <= 1'b0;
             cached_word_valid<=ENABLE_WORD_CACHE && cpu_req &&
                 cpu_addr[ROM_WORD_BITS+1:2]==req_addr_hold && accepted_epoch==epoch_seen && epoch_sync2==epoch_seen;

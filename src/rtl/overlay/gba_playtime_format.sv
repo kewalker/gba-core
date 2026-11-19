@@ -149,8 +149,13 @@ module gba_playtime_overlay(
     wire [1:0] line_number=local_y[4:3];
     wire [1:0] source_line=line_number==0 ? first_line : line_number==1 ? second_line : 2'd2;
     wire [6:0] local_x=7'(x-origin_x);
-    wire [2:0] column=local_x%7'd5,row=local_y[2:0];
-    wire [4:0] character=local_x/7'd5;
+    // The font ROM already registers this address. A combinational lookup
+    // shares quotient and remainder without adding a pixel of latency.
+    (* romstyle="MLAB" *) reg [7:0] character_columns[0:127];
+    initial for(integer pixel=0;pixel<128;pixel=pixel+1)
+        character_columns[pixel]={5'(pixel/5),3'(pixel%5)};
+    wire [4:0] character=character_columns[local_x][7:3];
+    wire [2:0] column=character_columns[local_x][2:0],row=local_y[2:0];
     reg [4:0] ch;
     reg line_enabled;
     reg [27:0] duration;

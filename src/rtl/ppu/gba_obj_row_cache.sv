@@ -21,6 +21,9 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
     output reg window_opaque,
     output reg overrun
 );
+    // Release the render-clock state with a reset synchronized to clk.
+    wire render_reset;
+    gba_reset_sync render_reset_sync(.clk(clk),.reset_in(reset),.reset_out(render_reset));
     localparam IDLE=0,CLEAR=1,ATTR=2,GEOMETRY=3,SAMPLE=4,
                WAIT_TILE=5,READ_PIXEL=6,WRITE_PIXEL=7,NEXT_OBJ=8,WAIT_OAM=9,WAIT_MATRIX=10,
                TILE_INDEX=11,TILE_ADDRESS=12,CHECK_TILE=13,AFFINE_MULT=14,AFFINE_SUM=15,AFFINE_CENTER=16,DECODE_SIZE=17;
@@ -74,7 +77,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
     reg [1:0] bank_capture;
     (* preserve, dont_merge *) reg [15:0] response_tag;
     always @(posedge clk)begin
-        if(reset)begin matrix_capture<=0;response_tag<=0;bank_capture<=0;end
+        if(render_reset)begin matrix_capture<=0;response_tag<=0;bank_capture<=0;end
         else begin
             matrix_capture<=!begin_line && state==WAIT_MATRIX && wait_count==1 ? (4'b0001 << matrix_word) : 4'b0000;
             // Requests wait at least four clocks before accepting a tagged
@@ -86,7 +89,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
             bank_capture<=!begin_line && state==CLEAR && clear_x==238 ?
                 (target_y[0] ? 2'b10 : 2'b01) : 2'b00;
         end
-        if(reset)begin matrix_cache<=0;bank_y[0]<=0;bank_y[1]<=0;end
+        if(render_reset)begin matrix_cache<=0;bank_y[0]<=0;bank_y[1]<=0;end
         else if(!begin_line)begin
             for(integer lane=0;lane<4;lane=lane+1)
                 if(matrix_capture[lane])matrix_cache[lane*16+:16]<=oam_data[63:48];
@@ -122,7 +125,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
             else if(held_y!=y) begin held_y<=y;event_toggle<=!event_toggle;end
         end
         always @(posedge clk) begin
-            if(reset) begin event_sync<=0;event_seen<=0;received_y<=8'hff;received_line<=0;end
+            if(render_reset) begin event_sync<=0;event_seen<=0;received_y<=8'hff;received_line<=0;end
             else begin
                 event_sync<={event_sync[0],event_toggle};
                 // Register the event alongside its descriptor. The renderer
@@ -163,7 +166,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
     always @(posedge clk) begin
         previous_pixel<=pixels[engine_addr];
         display_pixel<=pixels[display_addr];
-        if(!reset && !begin_line) begin
+        if(!render_reset && !begin_line) begin
             if(state==CLEAR) pixels[engine_addr]<=0;
             else if(state==WRITE_PIXEL && sampled_index!=0) begin
                 if(window_object) pixels[engine_addr]<={previous_pixel[11],1'b1,previous_pixel[9:0]};
@@ -178,7 +181,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
     // tuple. Bank-tag comparisons must not reach the BG window/priority
     // compositor and its palette-address register in the same render clock.
     always @(posedge clk) begin
-        if(reset) begin
+        if(render_reset) begin
             display_valid_stage<=0;palette_index<=0;pixel_priority<=3;window_opaque<=0;semi_transparent<=0;
         end else begin
             display_valid_stage<=display_valid;
@@ -212,25 +215,18 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
     reg [7:0] geometry_relative_y;
 `endif
     wire [9:0] snapped_target_y,snapped_screen_x;
-    wire [3:0] mosaic_remainder_x,mosaic_remainder_y;
+    wire [3:0] mosaic_remainder_y;
+    wire mosaic_x_group_start;
     wire mosaic_x_valid,mosaic_y_valid;
 `ifdef GBK_SAVESTATE
-    reg mosaic_y_coordinate_matches;
-    wire mosaic_y_size_valid;
-    // The lookup captures old target_y on this edge. Predict whether its tag
-    // matches the new target_y at the two existing update sites, keeping the
-    // coordinate comparator out of the GEOMETRY next-state path.
-    always @(posedge clk)begin
-        if(reset)mosaic_y_coordinate_matches<=target_y==0;
-        else if(begin_line)mosaic_y_coordinate_matches<=target_y==(line_y==227 ? 8'd0 : line_y+8'd1);
-        else mosaic_y_coordinate_matches<=1;
-    end
-    gba_mosaic_coordinate #(.COORD_BITS(8),.CHECK_COORDINATE(0)) mosaic_y(.clk,.coordinate({2'd0,target_y}),.size(mosaic[7:4]),.snapped(snapped_target_y),.valid(mosaic_y_size_valid),.remainder_value(mosaic_remainder_y));
-    assign mosaic_y_valid=mosaic_y_coordinate_matches && mosaic_y_size_valid;
+    // After a line change the renderer clears the row before DECODE_SIZE.
+    // The coordinate lookup has settled by then. Size can still change
+    // during rendering, so retain the size-tag check at consumption.
+    gba_mosaic_coordinate #(.COORD_BITS(8),.CHECK_COORDINATE(0)) mosaic_y(.clk,.coordinate({2'd0,target_y}),.size(mosaic[7:4]),.snapped(snapped_target_y),.valid(mosaic_y_valid),.remainder_value(mosaic_remainder_y));
 `ifdef GBK_SIM
-    always @(negedge clk)if(!reset && (^target_y)!==1'bx && (^mosaic_y.coordinate_tag)!==1'bx &&
-        mosaic_y_coordinate_matches !== (mosaic_y.coordinate_tag=={2'd0,target_y}))
-        $fatal(1,"Mosaic Y coordinate validity predictor mismatch");
+    always @(posedge clk)if(!render_reset && !begin_line && state==DECODE_SIZE && attributes[12] &&
+        mosaic_y.coordinate_tag !== {2'd0,target_y})
+        $fatal(1,"OBJ consumed mosaic Y before its line coordinate settled");
 `endif
 `else
     gba_mosaic_coordinate #(.COORD_BITS(8)) mosaic_y(.clk,.coordinate({2'd0,target_y}),.size(mosaic[7:4]),.snapped(snapped_target_y),.valid(mosaic_y_valid),.remainder_value(mosaic_remainder_y));
@@ -243,12 +239,12 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
     // unchanged. Track the three existing update sites instead of putting a
     // wide tag comparison ahead of every SAMPLE next-state decision.
     always @(posedge clk)begin
-        if(reset || begin_line)mosaic_coordinate_matches<=1;
+        if(render_reset || begin_line)mosaic_coordinate_matches<=1;
         else if(state==GEOMETRY)mosaic_coordinate_matches<=screen_x==attributes[24:16];
         else if(state==WRITE_PIXEL || (state==TILE_INDEX && skip_sample))mosaic_coordinate_matches<=0;
         else mosaic_coordinate_matches<=1;
     end
-    gba_mosaic_coordinate #(.COORD_BITS(9),.CHECK_COORDINATE(0)) mosaic_x(.clk,.coordinate({1'b0,screen_x}),.size(mosaic[3:0]),.snapped(snapped_screen_x),.valid(mosaic_x_size_valid),.remainder_value(mosaic_remainder_x));
+    gba_mosaic_coordinate #(.COORD_BITS(9),.CHECK_COORDINATE(0)) mosaic_x(.clk,.coordinate({1'b0,screen_x}),.size(mosaic[3:0]),.snapped(snapped_screen_x),.valid(mosaic_x_size_valid),.remainder_value(),.group_start(mosaic_x_group_start));
     assign mosaic_x_valid=mosaic_coordinate_matches && mosaic_x_size_valid;
 `ifdef GBK_SIM
     always @(negedge clk)if(!reset && (^screen_x)!==1'bx && (^mosaic_x.coordinate_tag)!==1'bx &&
@@ -256,7 +252,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
         $fatal(1,"Mosaic coordinate validity predictor mismatch");
 `endif
 `else
-    gba_mosaic_coordinate #(.COORD_BITS(9)) mosaic_x(.clk,.coordinate({1'b0,screen_x}),.size(mosaic[3:0]),.snapped(snapped_screen_x),.valid(mosaic_x_valid),.remainder_value(mosaic_remainder_x));
+    gba_mosaic_coordinate #(.COORD_BITS(9)) mosaic_x(.clk,.coordinate({1'b0,screen_x}),.size(mosaic[3:0]),.snapped(snapped_screen_x),.valid(mosaic_x_valid),.remainder_value(),.group_start(mosaic_x_group_start));
 `endif
     wire [7:0] vertical_delta=attributes[12] ? {4'd0,mosaic_remainder_y} : 8'd0;
     wire [7:0] sampled_relative_y_next=relative_y<vertical_delta ? 8'd0 : relative_y-vertical_delta;
@@ -267,7 +263,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
     wire signed [15:0] pa=matrix[15:0],pb=matrix[31:16],pc=matrix[47:32],pd=matrix[63:48];
     wire signed [8:0] start_x=-$signed({1'b0,decoded_field_w>>1});
     wire signed [8:0] start_y=$signed({1'b0,sampled_relative_y})-$signed({1'b0,decoded_field_h>>1});
-    wire mosaic_group_start=!object_mosaic || local_x==0 || mosaic_remainder_x==0;
+    wire mosaic_group_start=!object_mosaic || local_x==0 || mosaic_x_group_start;
     wire [5:0] normal_x=hflip ? width-1-local_x : local_x;
     // Retain the group's first texture coordinate rather than recomputing
     // step*remainder for each pixel. The first partial group is clamped to
@@ -310,28 +306,25 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
     wire [3:0] response_nibble=tile_word_data[nibble_offset*4+:4];
     // In 8bpp the byte already represents transparent index zero. In 4bpp
     // only the palette prefix needs masking when the nibble is zero.
-    // Decode transparency and palette bank in parallel before the pixel mux.
-    // Kept lane outputs prevent zero detection from following sample_x selection.
-    (* keep = "true" *) wire [63:0] sample_expanded,response_expanded;
-    genvar lane;
-    generate for(lane=0;lane<8;lane=lane+1) begin : palette_lane
-        assign sample_expanded[lane*8+:8]={((|cached_data[lane*4+:4]) ? palette_bank : 4'd0),cached_data[lane*4+:4]};
-        assign response_expanded[lane*8+:8]={((|tile_word_data[lane*4+:4]) ? palette_bank : 4'd0),tile_word_data[lane*4+:4]};
-    end endgenerate
-    wire [7:0] sample_palette_index=eight_bpp ? sample_byte : sample_expanded[nibble_offset*8+:8];
+    wire [7:0] sample_palette_index=eight_bpp ? sample_byte :
+        {(sample_nibble!=0 ? palette_bank : 4'd0),sample_nibble};
     // Decode both possible texels before selecting the capture state. This
     // avoids state decode -> 32-bit source mux -> nibble extraction -> zero
     // detection in a single render clock. No fetch or pixel state is added.
-    wire [7:0] response_palette_index=eight_bpp ? response_byte : response_expanded[nibble_offset*8+:8];
-    wire [4:0] source_word=WORD_READS ?
-        (eight_bpp ? {1'b0,sample_x[5:2]} : {2'b0,sample_x[5:3]}) :
-        (eight_bpp ? sample_x[5:1] : {1'b0,sample_x[5:2]});
+    wire [7:0] response_palette_index=eight_bpp ? response_byte :
+        {(response_nibble!=0 ? palette_bank : 4'd0),response_nibble};
+    // Store the 8bpp coordinate tag at either read width. A 4bpp word
+    // covers twice as many pixels, so its match ignores the low tag bit.
+    // Colour depth is constant until GEOMETRY invalidates the tag.
+    wire [4:0] source_word=WORD_READS ? {1'b0,sample_x[5:2]} : sample_x[5:1];
+    wire source_word_hit=cached_source_word[4:1]==source_word[4:1] &&
+        (!eight_bpp || cached_source_word[0]==source_word[0]);
     wire cached_address_hit=WORD_READS ? cached_addr[16:1]==sample_addr[16:1] : cached_addr==sample_addr;
     wire [16:0] next_sample_addr=eight_bpp ? {3'b010,sample_tile[9:1],sample_y[2:0],sample_x[2:1]} :
         {3'b010,sample_tile,sample_y[2:0],sample_x[2]};
 
     always @(posedge clk) begin
-        if(reset) begin
+        if(render_reset) begin
             state<=IDLE;seen_y<=8'hff;target_y<=0;clear_x<=0;
             object_index<=0;attributes<=0;bank_valid<=0;
             geometry_w<=0;geometry_h<=0;
@@ -363,9 +356,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
                 if(EXTERNAL_OAM) begin oam_addr<=object_index;wait_count<=2;state<=WAIT_OAM;end
                 else begin attributes<=oam[object_index*48+:48];state<=DECODE_SIZE;end
             end
-            WAIT_OAM: begin
-                state<=WAIT_OAM;
-                if(wait_count!=0) wait_count<=wait_count-1'b1;
+            WAIT_OAM: if(wait_count!=0) wait_count<=wait_count-1'b1;
                 else begin
                     attributes<=oam_data[47:0];
                     if(oam_data[8]) begin
@@ -373,10 +364,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
                         wait_count<=2;state<=WAIT_MATRIX;
                     end else state<=DECODE_SIZE;
                 end
-            end
-            WAIT_MATRIX: begin
-                state<=WAIT_MATRIX;
-                if(wait_count!=0) wait_count<=wait_count-1'b1;
+            WAIT_MATRIX: if(wait_count!=0) wait_count<=wait_count-1'b1;
                 else begin
 `ifndef GBK_FAST_FORWARD
                     matrix_cache[matrix_word*16+:16]<=oam_data[63:48];
@@ -384,21 +372,18 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
                     if(matrix_word==3) state<=DECODE_SIZE;
                     else begin matrix_word<=matrix_word+1'b1;oam_addr<=oam_addr+1'b1;wait_count<=2;end
                 end
-            end
-            DECODE_SIZE: begin
-                state<=DECODE_SIZE;
-                if(!attributes[12] || mosaic_y_valid)begin
+            DECODE_SIZE: if(!attributes[12] || mosaic_y_valid)begin
                 // Separate shape/size decoding from affine field expansion
                 // and centering; their combined fitted path exceeded 7.512 ns.
                 geometry_w<=decoded_w;geometry_h<=decoded_h;
 `ifdef GBK_SAVESTATE
-                // Target line and latched attributes stay fixed for this
-                // object. Use the existing decode edge, with no extra state,
-                // to split subtraction from the GEOMETRY row-bound decision.
-                geometry_relative_y<=relative_y;
+                // Divide the row by two for double-size affine fields.
+                // Capture it during decode so GEOMETRY compares against the
+                // unchanged height without an attribute-controlled mux.
+                geometry_relative_y<=(attributes[8] && attributes[9]) ?
+                    {1'b0,relative_y[7:1]} : relative_y;
 `endif
                 sampled_relative_y<=sampled_relative_y_next;state<=GEOMETRY;
-            end
             end
             GEOMETRY: begin
                 // DSP inputs are captured independently above; rejected
@@ -425,7 +410,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
                 semi_object<=attributes[11:10]==1;
                 if((!attributes[8] && attributes[9]) || attributes[11:10]==3 ||
 `ifdef GBK_SAVESTATE
-                    (attributes[11] && !dispcnt[15]) || geometry_w==0 || geometry_relative_y>=decoded_field_h)
+                    (attributes[11] && !dispcnt[15]) || geometry_w==0 || geometry_relative_y>={1'b0,geometry_h})
 `else
                     (attributes[11] && !dispcnt[15]) || geometry_w==0 || relative_y>=decoded_field_h)
 `endif
@@ -452,9 +437,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
             // Vertical geometry was captured before walking this object's
             // row. Its lookup need not gate every later pixel's registers.
             // Check it at DECODE_SIZE, where its data is actually consumed.
-            SAMPLE: begin
-                state<=SAMPLE;
-                if(!object_mosaic || mosaic_x_valid)begin
+            SAMPLE: if(!object_mosaic || mosaic_x_valid)begin
                 if(mosaic_group_start)begin
                     mosaic_texture_u<=texture_u;mosaic_texture_v<=texture_v;mosaic_source_x<=normal_x;
                     mosaic_outside<=current_outside;
@@ -473,12 +456,11 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
                 cached_row_hit<=sampled_row_hit;
                 state<=TILE_INDEX;
             end
-            end
             TILE_INDEX: if(skip_sample) begin
                 local_x<=local_x+1'b1;screen_x<=screen_x+1'b1;
                 texture_u<=next_texture_u;texture_v<=next_texture_v;
                 state<=local_x==field_width-1 ? NEXT_OBJ : SAMPLE;
-            end else if(cached_row_hit && cached_source_word==source_word) begin
+            end else if(cached_row_hit && source_word_hit) begin
                 // Adjacent pixels usually share a fetched halfword. The
                 // destination RAM read has already settled since SAMPLE;
                 // neither address generation nor another read stage is needed.
@@ -501,9 +483,7 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
                 sampled_index<=sample_palette_index;
                 state<=READ_PIXEL;
             end
-            WAIT_TILE: begin
-                state<=WAIT_TILE;
-                if(TAGGED_READS && WORD_READS ?
+            WAIT_TILE: if(TAGGED_READS && WORD_READS ?
 `ifdef GBK_FAST_FORWARD
                     wait_count==0 && tile_word_valid && tile_word_addr==response_tag : wait_count==0) begin
 `else
@@ -524,7 +504,6 @@ module gba_obj_row_cache #(parameter EXTERNAL_OAM=0, WORD_READS=0, VIDEO_CDC=0, 
                 // same-address word from before a completed texture write.
                 // After this minimum, wait for the exact tagged response.
                 else if(wait_count!=0) wait_count<=wait_count-1'b1;
-            end
             READ_PIXEL: state<=WRITE_PIXEL;
             WRITE_PIXEL: begin
                 local_x<=local_x+1'b1;screen_x<=screen_x+1'b1;

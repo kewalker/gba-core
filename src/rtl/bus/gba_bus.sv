@@ -296,7 +296,9 @@ module gba_bus #(
     logic [31:0] memory_probe_iwram_rdata;
     logic [4:0]  memory_probe_state;
 
+`ifdef GBK_CPU_OVERLAP
     wire [31:0] research_fetch_pc;
+`endif
     wire cpu_allow,dma_allow,gba_tick;
     wire timing_code,timing_thumb,timing_exec,timing_irq,timing_refill;
     wire [3:0] timing_internal_cycles;
@@ -322,7 +324,13 @@ module gba_bus #(
 `endif
             .cpu_code(timing_code),.cpu_thumb(timing_thumb),.cpu_exec(timing_exec),.cpu_irq(timing_irq),
             .cpu_refill(timing_refill),
-            .cpu_addr(timing_code ? research_fetch_pc : cpu_addr),.cpu_size,.cpu_internal_cycles(timing_internal_cycles),
+            .cpu_addr(timing_code ?
+`ifdef GBK_CPU_OVERLAP
+                research_fetch_pc
+`else
+                debug_pc
+`endif
+                : cpu_addr),.cpu_size,.cpu_internal_cycles(timing_internal_cycles),
             .dma_active(dma_timing_active),.dma_access(dma_timing_access),.dma_write(dma_timing_write),
             .dma_addr(dma_timing_addr),.dma_size(dma_timing_size),.waitcnt(timing_waitcnt),
             .gba_tick,.cpu_allow,.dma_allow,.profile(debug_cycle_profile));
@@ -340,7 +348,10 @@ module gba_bus #(
         .state_quiescent(state_cpu_quiescent),.state_valid(state_cpu_valid),.state_rdata(state_cpu_rdata),
 `endif
         .clk, .reset, .halt(execution_halted),
-        .research_fetch_pc(research_fetch_pc),.execution_enable(cpu_allow),.timing_code,.timing_thumb,.timing_exec,.timing_irq,.timing_internal_cycles,.timing_refill,
+`ifdef GBK_CPU_OVERLAP
+        .research_fetch_pc(research_fetch_pc),
+`endif
+        .execution_enable(cpu_allow),.timing_code,.timing_thumb,.timing_exec,.timing_irq,.timing_internal_cycles,.timing_refill,
         .bus_valid(cpu_req), .bus_write(cpu_write), .bus_size(cpu_size),.bus_lock(cpu_bus_lock),
         .bus_addr(cpu_addr), .bus_wdata(cpu_wdata), .bus_rdata(cpu_rdata),
         .bus_ready(cpu_ready), .irq(peripheral_irq), .debug_pc,

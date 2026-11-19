@@ -17,8 +17,10 @@ module gba_audio_output (
     // Mailbox data is held until the next request (one audio frame later).
     // The acknowledged data has two synchronizer clocks plus a full frame
     // to settle before use; left/right are always captured together.
-    always_ff @(posedge clk_source or posedge reset) begin
-        if(reset) begin request_sync<=0;ack_toggle<=0;mailbox<=0;end
+    wire source_reset;
+    gba_reset_sync source_reset_sync(.clk(clk_source),.reset_in(reset),.reset_out(source_reset));
+    always_ff @(posedge clk_source or posedge source_reset) begin
+        if(source_reset) begin request_sync<=0;ack_toggle<=0;mailbox<=0;end
         else begin
             request_sync<={request_sync[0],request_toggle};
             if(request_sync[1]!=ack_toggle) begin
@@ -26,8 +28,10 @@ module gba_audio_output (
             end
         end
     end
-    always_ff @(posedge clk_audio or posedge reset) begin
-        if(reset) begin
+    wire audio_reset;
+    gba_reset_sync audio_reset_sync(.clk(clk_audio),.reset_in(reset),.reset_out(audio_reset));
+    always_ff @(posedge clk_audio or posedge audio_reset) begin
+        if(audio_reset) begin
             ack_sync<=0;request_toggle<=0;frame<=0;divider<=0;
             bit_index<=0;lrck<=0;dac<=0;
         end else begin

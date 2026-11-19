@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "identity": "BitBird.GBA",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "release_version": {
-    "version": "0.1.2",
-    "tag": "v0.1.2",
-    "date": "2026-11-11"
+    "version": "0.2.0",
+    "tag": "v0.2.0",
+    "date": "2026-11-20"
   },
-  "image_sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7",
+  "image_sha256": "4a975bf37396e7d62331265bffb53dc106bddf98ddd1e21cf7425c9b61c6b341",
   "timing": {
-    "setup_ns": 0.114,
-    "hold_ns": 0.089,
-    "alms": 18097,
-    "physical_audits": 21
+    "setup_ns": 0.612,
+    "hold_ns": 0.132,
+    "alms": 17222,
+    "physical_audits": 23
   },
-  "scope": "Full-feature public source rebuild with passing timing and physical audits.",
+  "scope": "Full-feature public source rebuild with passing timing and 23 physical audits; image identical to the hardware-tested 0.2.0 candidate.",
   "files": [
     {
       "path": "src/fpga/ap_core.qpf",
@@ -23,7 +23,7 @@
     },
     {
       "path": "src/fpga/ap_core.qsf",
-      "sha256": "031e71ef869c88c5019e01db3fd25ca6aaeecf05a3f360dd24138a3d39fd499a",
+      "sha256": "5918c93f1cb55ce1e88ceb64c8121943d33d6ea4172b213e01610494856af896",
       "kind": "qualified-source"
     },
     {
@@ -43,7 +43,7 @@
     },
     {
       "path": "src/fpga/apf/build_id.mif",
-      "sha256": "7b5bfcbb870d9972a9d6c2efba26db23e75630f958771129f2f20c5f753dcbf2",
+      "sha256": "6ba9293d9cdc7ff941c68275a70a03d78ebd1633c208c58d43bf64175ebb8a24",
       "kind": "qualified-source"
     },
     {
@@ -103,7 +103,7 @@
     },
     {
       "path": "src/fpga/core/core_top.v",
-      "sha256": "a3a96ef07ba34b193e49717f2bfd29f478eb7b2dcbe3af15f1b2b4a377bf7867",
+      "sha256": "5172af5ab39c1282a93e4966650d7b6061ab4e84ca0b4c6144dfda6ecb033fd7",
       "kind": "qualified-source"
     },
     {
@@ -238,7 +238,7 @@
     },
     {
       "path": "src/rtl/apu/gba_audio_output.sv",
-      "sha256": "8689c7b1799c04fa3ab02939d18b67c420cb601f72b6077b891736e608aae0a3",
+      "sha256": "f57f6bd721efb042dde3045208069a71242694b52d9ce2115d6095aa50d22680",
       "kind": "qualified-source"
     },
     {
@@ -248,12 +248,12 @@
     },
     {
       "path": "src/rtl/bus/gba_bus.sv",
-      "sha256": "6738c86f4597e3a2a4d5e442334fbca915f9f4ac6905690734384f92c30723fb",
+      "sha256": "0a5f6dc5f64bc4a47321ae94919031423441626d5d2a2324dce18df0b5621f8b",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/cpu/arm7tdmi_core.sv",
-      "sha256": "12decd9c59005eb3993eea3af94f646bca4fc0882bea5c847b1d258fb2c6f8b5",
+      "sha256": "d2c94c801bbe1c2610b1d89f172a9bbdbe49663ccfe1b245ffc5c0a004a7402c",
       "kind": "qualified-source"
     },
     {
@@ -283,7 +283,7 @@
     },
     {
       "path": "src/rtl/memory/gba_cartridge_psram.sv",
-      "sha256": "bdf038f3ed48d1ed5f45dac61b04a74b24a913be7868d68b5c7da9070d3f6393",
+      "sha256": "b075489d6cf7f80131f17b4c0c63c74237f0189d7b872645de9229626c504867",
       "kind": "qualified-source"
     },
     {
@@ -308,7 +308,7 @@
     },
     {
       "path": "src/rtl/memory/gba_ewram_cached_psram.sv",
-      "sha256": "72b35243a536b044261eb8266b3381de352aa37413a2a37cdcac8d7a0de60dee",
+      "sha256": "e107f1cd4debc34ae81a6e782f90a3900b97c90ea82353b521965350eaa32e0e",
       "kind": "qualified-source"
     },
     {
@@ -338,7 +338,7 @@
     },
     {
       "path": "src/rtl/memory/gba_memory_map.sv",
-      "sha256": "e67dc5866c70619facc61f3f7bdc053b512744c4aaf01bc7f33a5e076b079236",
+      "sha256": "cdf648144f1958764768bff180f3cebf6b2cf21beb14e06727c02c17f3408241",
       "kind": "qualified-source"
     },
     {
@@ -393,7 +393,7 @@
     },
     {
       "path": "src/rtl/memory/gba_sdram_cdc.sv",
-      "sha256": "095b46a914c6ce93943109883b26ffff72614183f5fad4d738bf51729ad79373",
+      "sha256": "700f826a50af1a1d1cb9ad43daa4b6797b92bf458e8d3008652a1bfe859c1635",
       "kind": "qualified-source"
     },
     {
@@ -413,7 +413,7 @@
     },
     {
       "path": "src/rtl/memory/gba_vram_render_scheduler.sv",
-      "sha256": "752adbc9b9e175018500fd40c2098e9e1247c50943a5c91b0c5e24c8144cadf5",
+      "sha256": "6c2699cd90e12390643ee049c49269d57272d47b886d43dfb999b66088a7f412",
       "kind": "qualified-source"
     },
     {
@@ -433,7 +433,7 @@
     },
     {
       "path": "src/rtl/overlay/gba_playtime_format.sv",
-      "sha256": "a28a36cfd9aca79472657d45fc4564e74e4cb3c9469faaefec3806d9e064ccb4",
+      "sha256": "316378d39c5f08dc74806ae240437d50d141a0287570abb1898cdffc691dd19b",
       "kind": "qualified-source"
     },
     {
@@ -443,7 +443,7 @@
     },
     {
       "path": "src/rtl/overlay/gba_rtc_persistence_link.sv",
-      "sha256": "5b590f424f35601f17bb898749b97b06d6897c2dce361bd4971018a231b0a80c",
+      "sha256": "61f8648e6735a8a167093abc8a1a103ed85523cc3a2f78d31364dd1e481cbb62",
       "kind": "qualified-source"
     },
     {
@@ -453,12 +453,12 @@
     },
     {
       "path": "src/rtl/ppu/gba_apf_video_out.sv",
-      "sha256": "401e6cb568aa61be8a5ecd40d166a514be0fa78daae6e06b578e7082b26c6d51",
+      "sha256": "e8b4c19a28103303a5817c00b42c5dc10a23b4be243964c55cf64f77befe8d6d",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/ppu/gba_compat_graphics.sv",
-      "sha256": "d5bc51ad9d9e01625288dca6e15b7ca319b82c61de1cafc0a85f343a987d8641",
+      "sha256": "e0ba0c76cf935e9c4194709f978cca7b09a1c782f0e8bfad048f40d2c3e57571",
       "kind": "qualified-source"
     },
     {
@@ -468,12 +468,12 @@
     },
     {
       "path": "src/rtl/ppu/gba_obj_row_cache.sv",
-      "sha256": "9145359661616e5696c09c1901ada35dfd323cd40b323f8a46bbe4686cf0cc84",
+      "sha256": "0152e6c9bbc078177d8f0e3194a3b6da006f81fb16dca66662a358c8064d1d92",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/ppu/gba_ppu.sv",
-      "sha256": "4c17326402a3269a618a323504ad04986cbf9cdf71035ee9ba442840a9d2a099",
+      "sha256": "4b6deeadcc53ee923bb2ff8b18dcfcbdf22ecadfc01d8c84a2d5e01e58f2b742",
       "kind": "qualified-source"
     },
     {
@@ -483,7 +483,7 @@
     },
     {
       "path": "src/rtl/serial/gba_serial.sv",
-      "sha256": "86dad8dd35889a4eed7c8ce9edab22e8b96ccaa98250c1ca45fd44c4a2eba3d0",
+      "sha256": "a005ddd9e1538596322045de54ce7185ed38a84eb932b0431ee8fcf90a1e1a74",
       "kind": "qualified-source"
     },
     {
@@ -508,7 +508,7 @@
     },
     {
       "path": "src/rtl/state/gba_state_identity.sv",
-      "sha256": "0ab85de24e7de73cf2c1a1f28dd402cf6e3c038681b4529873d39243d9475ac8",
+      "sha256": "01cf21aa8f5da38afc3e01aff4ec86de488c7fa6a89bb24fe19b5b707f6ec148",
       "kind": "qualified-source"
     },
     {
@@ -518,12 +518,12 @@
     },
     {
       "path": "src/rtl/state/gba_state_machine.sv",
-      "sha256": "4bd3ba305cc1f05845e29f9cca7f4a541d311eff24eae26cf74cee4294e7dfb7",
+      "sha256": "646739eca2847252f4836de38d094cf6add4a7ff5a27a5ee09e707a8bf69db43",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/state/gba_state_machine_access.sv",
-      "sha256": "688c3034f2018ee61b5e3a3917e8de1705d7ca9c0b0c4040c63dcd91615ffc29",
+      "sha256": "078b0c17d43ae33276e24ed4db67235bdf0034a517885957a46d294c425af91a",
       "kind": "qualified-source"
     },
     {
@@ -543,12 +543,12 @@
     },
     {
       "path": "src/rtl/state/gba_state_register_access.sv",
-      "sha256": "bfc9abc4ac7d42d88f24d506ddd6f9b2501da4be1af82a72b0dda51c1a70c85c",
+      "sha256": "3fc99035141dd6d08369d05b7ca071561c395143fc65db0f7488b827ac036aca",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/state/gba_state_register_validator.sv",
-      "sha256": "343a74be0d15f9ee7bc48618ffa4f3875d3c84829c2db9cd2992c7b7d6af92ac",
+      "sha256": "3817e2582bb8bc3722d0f91f5bd1ca5ff153caaaa3ce7c0b3d7778cffe5fa37d",
       "kind": "qualified-source"
     },
     {
@@ -563,7 +563,7 @@
     },
     {
       "path": "src/rtl/state/gba_state_video.sv",
-      "sha256": "1f40f734ee5c63259decc25c85f49021a6b4e8275acc81ac674d16526e85a9d6",
+      "sha256": "e716c5f19557ad7571005c87e42b118c26c253dc9f0bd13e996a996f6e332d4e",
       "kind": "qualified-source"
     },
     {
@@ -593,12 +593,12 @@
     },
     {
       "path": "src/rtl/top/gba_cycle_scheduler.sv",
-      "sha256": "4c59d7d33e467a3ba3d3a0eedc58416f0e5d33f24b5ec17044c0083ad7f907cb",
+      "sha256": "679c8afe4d564b4c2a83266bf8081e49abf097d9ee2dd5f74635452271efdad2",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/top/gba_fast_forward.sv",
-      "sha256": "5fc8da372d787ab62283aff49cd566bcdd6276e9b8d797f32614e0fd628f6d1c",
+      "sha256": "08fe305de8e680d8c6bb5aace443859787e583a6b2d2f7b49f2165923281601d",
       "kind": "qualified-source"
     },
     {
@@ -613,7 +613,7 @@
     },
     {
       "path": "src/rtl/top/gba_gamepak_prefetch.sv",
-      "sha256": "5f3531785ad19cfed6f72783a8d2c0b0698da6561f27cb8497689bbe35bb8c2a",
+      "sha256": "86ba6fa264189607d4241565391680b69f191d278900a4c687c0cf3ac3d886ef",
       "kind": "qualified-source"
     },
     {
@@ -623,7 +623,7 @@
     },
     {
       "path": "src/rtl/top/gba_rom_profiler.sv",
-      "sha256": "e2f145a4926bc5eda1339adf429af8a905e3c21b3312ac3147274152b129a674",
+      "sha256": "5d1fb7bde26e4b354810cc1abed99996f580cf8f332be7dd5db6105d4e14a2c5",
       "kind": "qualified-source"
     },
     {
@@ -643,12 +643,12 @@
     },
     {
       "path": "src/rtl/top/gba_stop_resync.sv",
-      "sha256": "f286deab3c72e5ba264dcbbc12f26c3e9838dffa23494ff8b68ab24ecdd6be9c",
+      "sha256": "60ac8e5a795ee0f4789ef73051cf8fb369730aad43e792489bf5b56b82b12004",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/top/gba_system_top.sv",
-      "sha256": "7c8e968ae5e1ff92b9e663550aeb069bb64eff847eb5d9535c4df8b0f3e8daae",
+      "sha256": "f61bcb32288ee5623845ee0cab0b4500999290b7e234bf8aec8ac161fea2e718",
       "kind": "qualified-source"
     },
     {
@@ -657,13 +657,28 @@
       "kind": "qualified-source"
     },
     {
+      "path": "src/fpga/core/ppu_obj_route_fit.sdc",
+      "sha256": "cf838fc605b0ae525800d0433fef2a10893dc6d3ed118fd5a62079167c0a7c24",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/ppu_text_map_fit.sdc",
+      "sha256": "6e44ab8f77d1ebe4701ba6031f03be96ecac612857793969ad8cc1d33d713b3e",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/top/gba_reset_sync.sv",
+      "sha256": "ed62f7b5d6483f805fe59aea82451e1e38e02de09b238d7dcbd741fd6112d656",
+      "kind": "qualified-source"
+    },
+    {
       "path": "pocket/manifest.json",
-      "sha256": "541f35ecdf8e9a41d40a6dfe8ed9a50560e14dc7e9b4ae9d81c9e5f817c22a66",
+      "sha256": "3196f202d1b25f32aca939a693034d534d35632266887de70fe9ecd457d706ce",
       "kind": "release-metadata"
     },
     {
       "path": "pocket/README.md",
-      "sha256": "b97450f65aa5ecd2807ab59667dc2638c6803f9b4f8a194939d28ea291a33a33",
+      "sha256": "079d71c9ceb41fca0fbc80e967c9b499d32bd96b27542246d82d2c80bc23509b",
       "kind": "release-metadata"
     },
     {
@@ -673,12 +688,12 @@
     },
     {
       "path": "pocket/Cores/BitBird.GBA/bitstream.rbf_r",
-      "sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7",
+      "sha256": "4a975bf37396e7d62331265bffb53dc106bddf98ddd1e21cf7425c9b61c6b341",
       "kind": "timing-validated-image"
     },
     {
       "path": "pocket/Cores/BitBird.GBA/core.json",
-      "sha256": "46eb6df50b275c52bc7e391afd9201d850d7dca2f37df3c1812767dd16131931",
+      "sha256": "f8175823ded127daf8266da7b226b8ea315eba427f939739ec6309e3b5dd5850",
       "kind": "release-metadata"
     },
     {
@@ -698,7 +713,7 @@
     },
     {
       "path": "pocket/Cores/BitBird.GBA/interact.json",
-      "sha256": "814656d658b6c2df110d71859b15175a8402c257089f0fcb7b4ea76c5fe13884",
+      "sha256": "c1f4926dca969c1579730bbab101d022b397346266aa27b7badf145ef643c49a",
       "kind": "tested-package"
     },
     {
@@ -767,12 +782,14 @@
       "kind": "simulation-source"
     },
     {
-      "path": "docs/build-validation-0.1.2-receipt.json",
-      "sha256": "d1f7510b7e4aeb4d69982a01c3324bf323897d37e452d7b4db01bfc028e7455d",
+      "path": "docs/build-validation-0.2.0-receipt.json",
+      "sha256": "2f72679e59dcd2604382279c1f8d8175aa68905ac459a58ecf8b969aa69cdf1e",
       "kind": "build-validation"
     }
   ],
   "hardware_acceptance": {
-    "new_hardware_test": false
+    "new_hardware_test": true,
+    "date": "2026-11-19",
+    "scope": "Owner Pocket test of the identical image: Emerald boot (20+ launches on the reset fix), GBA SP link in all tested orientations, Memory, sleep/wake, Soft Colors, fast-forward"
   }
 }

@@ -101,7 +101,9 @@ module gba_state_register_validator #(
     assign parallel_reject[164]=(word_index[7:0]==8'd164) && !(word_data[31:23]==0);
     assign parallel_reject[165]=(word_index[7:0]==8'd165) && !(word_data[31:15]==0);
     assign parallel_reject[166]=(word_index[7:0]==8'd166) && !(word_data[31:22]==0);
-    assign parallel_reject[175]=(word_index[7:0]==8'd175) && !((word_data & ~32'hffff7f8b)==0);
+    // A completed multiplayer transfer latches error/player ID in bits
+    // 6:4. The serial restore endpoint already preserves these bits.
+    assign parallel_reject[175]=(word_index[7:0]==8'd175) && !((word_data & ~32'hffff7ffb)==0);
     assign parallel_reject[176]=(word_index[7:0]==8'd176) && !((word_data & ~32'h0047c1ff)==0);
     assign parallel_reject[181]=(word_index[7:0]==8'd181) && !(word_data[31:24]==0 && word_data[5:3]<=5 &&
                 word_data[11:6]<=32 && (!word_data[0] || word_data[11:6]!=0));

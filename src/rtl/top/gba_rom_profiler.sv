@@ -20,8 +20,10 @@ module gba_rom_profiler #(parameter integer PHYSICAL_READ_UNITS=1)(
     reg [9:0] refresh_timer;
     assign profile={requests,retained_hits,cache_hits,misses,stream_misses,pairs,
                     lookup_clocks,miss_clocks,memory_snapshot};
+    wire memory_reset;
+    gba_reset_sync memory_reset_sync(.clk(memory_clk),.reset_in(reset),.reset_out(memory_reset));
     always @(posedge memory_clk) begin
-        if(reset) begin
+        if(memory_reset) begin
             memory_reads<=0;memory_active<=0;held_memory<=0;
             request_sync<=0;request_seen<=0;ack_toggle<=0;
         end else begin
@@ -34,8 +36,10 @@ module gba_rom_profiler #(parameter integer PHYSICAL_READ_UNITS=1)(
             end
         end
     end
+    wire cpu_reset;
+    gba_reset_sync cpu_reset_sync(.clk(cpu_clk),.reset_in(reset),.reset_out(cpu_reset));
     always @(posedge cpu_clk) begin
-        if(reset) begin
+        if(cpu_reset) begin
             requests<=0;retained_hits<=0;cache_hits<=0;misses<=0;
             stream_misses<=0;pairs<=0;lookup_clocks<=0;miss_clocks<=0;
             request_toggle<=0;ack_sync<=0;ack_seen<=0;

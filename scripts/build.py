@@ -184,7 +184,11 @@ def main():
             elif headers and cells and cells[0].startswith("dram_dq[") and len(cells) == len(headers):
                 pins[cells[0]] = cells[headers.index("Output Enable Register")]
         require(set(pins) == {f"dram_dq[{i}]" for i in range(16)} and all(v == "yes" for v in pins.values()), "SDRAM output-enable register packing failed")
-        require(re.search(r"cache_data_ram[^\n]*;\s*M10K(?: block)?\s*;", fit), "EWRAM cache data M10K mapping missing")
+        # The EWRAM cache data maps to one 64x32 single-clock MLAB.
+        require(re.search(r"(?m)^;[^;\r\n]*gba_ewram_cached_psram:external_ewram\.ewram\|"
+                          r"altsyncram:cache_data_ram\|[^;\r\n]*;\s*MLAB\s*;\s*Simple Dual Port\s*;"
+                          r"\s*Single Clock\s*;\s*64\s*;\s*32\s*;\s*64\s*;\s*32\s*;", fit),
+                "EWRAM cache data 64x32 MLAB mapping missing")
         stage("asm", [tools["quartus_asm"], "ap_core"], args.stage_timeout, "Quartus Prime Assembler was successful.")
         for row in sources:
             require(digest(project / row["path"]) == row["sha256"], f"Compiler changed preserved input: {row['path']}")

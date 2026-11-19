@@ -1,4 +1,4 @@
-# Installation and use — GBA by BitBird 0.1.2
+# Installation and use — GBA by BitBird 0.2.0
 
 Install the versioned package from the repository Releases page when available.
 BIOS and game files are not included. You need an Analogue Pocket, an SD card and your own GBA files.
@@ -13,7 +13,7 @@ See [Analogue's OS 2.0 notes](https://www.analogue.co/support/pocket/firmware/2.
 ## Install
 
 1. Back up the card, including Cores, Assets, Saves, Settings and Memories.
-2. Extract `BitBird.GBA_0.1.2.zip` to a temporary directory on your computer.
+2. Extract `BitBird.GBA_0.2.0.zip` to a temporary directory on your computer.
 3. Merge its `Cores`, `Platforms` and `Assets` folders into the card root. Merge
    matching folders; do not replace or erase whole card directories. Keep other
    cores and existing game/save data. The README, source information and license
@@ -68,18 +68,11 @@ They serve a different purpose from the game's own save file; keep ordinary
 in-game saves and card backups. Do not assume Memories from another core or old
 development identity will load correctly in this core.
 
-## Updating and historical development cores
+## Updating
 
 For a BitBird.GBA update, back up first and replace only the supplied package
-files. Retain Assets, Saves, Settings and Memories.
-
-If you have `gbk.GBK` or `kewalker.EZ-GBA`, keep the old core installed while
-trying BitBird.GBA. Shared GBA saves remain in the same platform folder, but
-core-specific Assets, Saves and Settings directories do not automatically change
-identity. Preserve both old directories and their Memories; cross-identity state
-loading is unverified. Where both old identities contain differing data, inspect
-and back up both; development migration tooling preferred kewalker.EZ-GBA data.
-No automatic migration or bulk-deletion tool is included in this public package.
+files. Retain Assets, Saves, Settings and Memories. Updating from 0.1.x keeps
+existing saves, settings, Memories and `.gbkstat` playtime/RTC sidecars.
 
 ## Troubleshooting and rollback
 

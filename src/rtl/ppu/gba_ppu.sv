@@ -102,6 +102,14 @@ module gba_ppu #(
 `ifdef GBK_SAVESTATE
     wire state_cache_reset=reset || state_render_invalidate===1'b1;
 `endif
+    // Text row caches run on render_clk; release them in that domain.
+    wire render_domain_reset;
+    gba_reset_sync render_domain_reset_sync(.clk(render_clk),.reset_in(reset),.reset_out(render_domain_reset));
+`ifdef GBK_SAVESTATE
+    wire render_cache_reset=render_domain_reset || state_render_invalidate===1'b1;
+`else
+    wire render_cache_reset=render_domain_reset;
+`endif
     localparam int ACTIVE_H = 160;
     // Native timing matches the reference GBA raster: 308 dots x 228 lines.
     // Keep the legacy raster available for existing isolated renderer tests.
@@ -304,44 +312,28 @@ module gba_ppu #(
             assign control_coordinates={1'b0,cache_y,x};
         end
         gba_text_row_cache #(.FRAME_LINES(TOTAL_H),.COHERENT_CONTROL(NATIVE_TIMING)) bg0(.clk(render_clk),
-`ifdef GBK_SAVESTATE
-            .reset(state_cache_reset),
-`else
-            .reset,
-`endif
+            .reset(render_cache_reset),
             .enabled(mode<=1 && dispcnt[8]),.x(bg0cnt[6] ? mosaic_x[8:0] : x),.y(bg0cnt[6] ? mosaic_y : cache_y),
             .control_x(bg0cnt[6] ? mosaic_control_x[8:0] : control_coordinates[8:0]),.control_y(bg0cnt[6] ? mosaic_control_y : control_coordinates[18:9]),
             .control_blank(control_coordinates[19]),
             .cnt(bg0cnt),.hofs(bg0hofs),.vofs(bg0vofs),.map_addr(bg_map_read_addr),.tile_addr(bg_tile_read_addr),
             .map_data(bg_map_read_data),.tile_data(bg_tile_read_data),.palette_index(cached_palette0));
         gba_text_row_cache #(.FRAME_LINES(TOTAL_H),.COHERENT_CONTROL(NATIVE_TIMING)) bg1(.clk(render_clk),
-`ifdef GBK_SAVESTATE
-            .reset(state_cache_reset),
-`else
-            .reset,
-`endif
+            .reset(render_cache_reset),
             .enabled(mode<=1 && dispcnt[9]),.x(bg1cnt[6] ? mosaic_x[8:0] : x),.y(bg1cnt[6] ? mosaic_y : cache_y),
             .control_x(bg1cnt[6] ? mosaic_control_x[8:0] : control_coordinates[8:0]),.control_y(bg1cnt[6] ? mosaic_control_y : control_coordinates[18:9]),
             .control_blank(control_coordinates[19]),
             .cnt(bg1cnt),.hofs(bg1hofs),.vofs(bg1vofs),.map_addr(bg1_map_read_addr),.tile_addr(bg1_tile_read_addr),
             .map_data(bg1_map_read_data),.tile_data(bg1_tile_read_data),.palette_index(cached_palette1));
         gba_text_row_cache #(.FRAME_LINES(TOTAL_H),.COHERENT_CONTROL(NATIVE_TIMING)) bg2(.clk(render_clk),
-`ifdef GBK_SAVESTATE
-            .reset(state_cache_reset),
-`else
-            .reset,
-`endif
+            .reset(render_cache_reset),
             .enabled(mode==0 && dispcnt[10]),.x(bg2cnt[6] ? mosaic_x[8:0] : x),.y(bg2cnt[6] ? mosaic_y : cache_y),
             .control_x(bg2cnt[6] ? mosaic_control_x[8:0] : control_coordinates[8:0]),.control_y(bg2cnt[6] ? mosaic_control_y : control_coordinates[18:9]),
             .control_blank(control_coordinates[19]),
             .cnt(bg2cnt),.hofs(bg2hofs),.vofs(bg2vofs),.map_addr(cached_map2),.tile_addr(cached_tile2),
             .map_data(bg2_map_read_data),.tile_data(bg2_tile_read_data),.palette_index(cached_palette2));
         gba_text_row_cache #(.FRAME_LINES(TOTAL_H),.COHERENT_CONTROL(NATIVE_TIMING)) bg3(.clk(render_clk),
-`ifdef GBK_SAVESTATE
-            .reset(state_cache_reset),
-`else
-            .reset,
-`endif
+            .reset(render_cache_reset),
             .enabled(mode==0 && dispcnt[11]),.x(bg3cnt[6] ? mosaic_x[8:0] : x),.y(bg3cnt[6] ? mosaic_y : cache_y),
             .control_x(bg3cnt[6] ? mosaic_control_x[8:0] : control_coordinates[8:0]),.control_y(bg3cnt[6] ? mosaic_control_y : control_coordinates[18:9]),
             .control_blank(control_coordinates[19]),
@@ -458,8 +450,10 @@ module gba_ppu #(
     // Production PPU timing runs at the video clock; decode staging must
     // use the fast RAM-render clock, not delay text by a whole video pixel.
     wire text_decode_clk = FAST_RENDER ? clk : render_clk;
+    wire text_decode_reset;
+    gba_reset_sync text_decode_reset_sync(.clk(text_decode_clk),.reset_in(reset),.reset_out(text_decode_reset));
     always_ff @(posedge text_decode_clk) begin
-        if (reset) begin
+        if (text_decode_reset) begin
             text_palette0 <= 0;
             text_palette1 <= 0;
             text_palette2 <= 0;
@@ -532,7 +526,7 @@ module gba_ppu #(
         reg [7:0] priorities;
         reg [3:0] opaque;
         always_ff @(posedge text_decode_clk) begin
-            if(reset) begin winners<=0;palettes<=0;priorities<=8'hff;opaque<=0;end
+            if(text_decode_reset) begin winners<=0;palettes<=0;priorities<=8'hff;opaque<=0;end
             else begin
                 winners<=bg_wins;
                 opaque<=bg_opaque;
@@ -844,13 +838,31 @@ module gba_ppu #(
         affine_vertical_pb * affine_line_coordinate;
     (* keep = "true" *) wire signed [26:0] affine_y_vertical =
         affine_vertical_pd * affine_line_coordinate;
-    // Three-input carry-save reduction keeps both DSP products parallel.
-    // All operations are modulo 2^28, matching the original assignment.
     function automatic signed [27:0] affine_sum3(input [27:0] a,b,c);
-        reg [27:0] carry_bits;
+        reg [27:0] sum_bits, carry_bits;
+        reg [8:0] fraction;
+        reg [5:0] group_sum[0:3];
+        reg [3:0] propagate, carry_in;
         begin
-            carry_bits=(a&b)|(a&c)|(b&c);
-            affine_sum3=(a^b^c)+(carry_bits<<1);
+            sum_bits=a^b^c;
+            carry_bits=((a&b)|(a&c)|(b&c))<<1;
+            // Resolve the integer carries in parallel with the fractional
+            // sum. A late DSP result sees short carry chains before the
+            // map index consumes integer bits.
+            fraction={1'b0,sum_bits[7:0]}+{1'b0,carry_bits[7:0]};
+            for(integer group_index=0;group_index<4;group_index=group_index+1) begin
+                group_sum[group_index]={1'b0,sum_bits[8+group_index*5+:5]}+
+                    {1'b0,carry_bits[8+group_index*5+:5]};
+                propagate[group_index]= &(sum_bits[8+group_index*5+:5] |
+                    carry_bits[8+group_index*5+:5]);
+            end
+            carry_in[0]=fraction[8];
+            for(integer group_index=1;group_index<4;group_index=group_index+1)
+                carry_in[group_index]=group_sum[group_index-1][5] |
+                    (propagate[group_index-1] & carry_in[group_index-1]);
+            affine_sum3[7:0]=fraction[7:0];
+            for(integer group_index=0;group_index<4;group_index=group_index+1)
+                affine_sum3[8+group_index*5+:5]=group_sum[group_index][4:0]+carry_in[group_index];
         end
     endfunction
     assign bg3_affine_x_raw = affine_sum3(affine_refx, {affine_x_vertical[26],affine_x_vertical}, {affine_x_horizontal[26],affine_x_horizontal});
@@ -1156,8 +1168,10 @@ module gba_render_coordinate_transfer #(parameter integer FRAME_LINES=228) (
             held_coordinates<=normalized_coordinates;event_toggle<=!event_toggle;
         end
     end
+    wire render_side_reset;
+    gba_reset_sync render_side_reset_sync(.clk(render_clk),.reset_in(reset),.reset_out(render_side_reset));
     always @(posedge render_clk) begin
-        if(reset) begin render_coordinates<=0;event_sync<=0;event_seen<=0;end
+        if(render_side_reset) begin render_coordinates<=0;event_sync<=0;event_seen<=0;end
         else begin
             event_sync<={event_sync[0],event_toggle};
             if(event_sync[1]!=event_seen) begin
@@ -1307,25 +1321,16 @@ module gba_text_row_cache #(parameter integer FRAME_LINES=640,parameter COHERENT
     // of flip/selection, so the selected bank needs no late colour comparison.
     wire [3:0] nibble_select={sample_x[1:0]==3,sample_x[1:0]==2,
                               sample_x[1:0]==1,sample_x[1:0]==0};
-    // Resolve each lane's bank/transparency before selecting a pixel. The low
-    // colour bits then have no selected-opacity signal in their clear cone.
-    function automatic [7:0] decode_nibble(input [3:0] pixel,input [3:0] bank);
-        begin decode_nibble=0;if(pixel!=0)decode_nibble={bank,pixel};end
-    endfunction
-    function automatic [7:0] decode_byte(input [7:0] pixel);
-        begin decode_byte=0;if(pixel!=0)decode_byte=pixel;end
-    endfunction
-    (* keep = 1 *) wire [7:0] decoded_nibble0=decode_nibble(word_pixel[3:0],attr[3:0]);
-    (* keep = 1 *) wire [7:0] decoded_nibble1=decode_nibble(word_pixel[7:4],attr[3:0]);
-    (* keep = 1 *) wire [7:0] decoded_nibble2=decode_nibble(word_pixel[11:8],attr[3:0]);
-    (* keep = 1 *) wire [7:0] decoded_nibble3=decode_nibble(word_pixel[15:12],attr[3:0]);
-    (* keep = 1 *) wire [7:0] decoded_byte0=decode_byte(word_pixel[7:0]);
-    (* keep = 1 *) wire [7:0] decoded_byte1=decode_byte(word_pixel[15:8]);
-    wire [7:0] nibble_palette=({8{nibble_select[0]}} & decoded_nibble0) |
-                             ({8{nibble_select[1]}} & decoded_nibble1) |
-                             ({8{nibble_select[2]}} & decoded_nibble2) |
-                             ({8{nibble_select[3]}} & decoded_nibble3);
-    wire [7:0] byte_palette=sample_x[0] ? decoded_byte1 : decoded_byte0;
+    // Reduce each nibble before selecting transparency. The four nibbles
+    // share a palette bank, so only the selected opaque pixel needs it.
+    wire [3:0] nibble_opaque={|word_pixel[15:12],|word_pixel[11:8],
+                              |word_pixel[7:4],|word_pixel[3:0]};
+    wire [3:0] nibble_pixel=({4{nibble_select[0]}} & word_pixel[3:0]) |
+                            ({4{nibble_select[1]}} & word_pixel[7:4]) |
+                            ({4{nibble_select[2]}} & word_pixel[11:8]) |
+                            ({4{nibble_select[3]}} & word_pixel[15:12]);
+    wire [7:0] nibble_palette={attr[3:0] & {4{|(nibble_select & nibble_opaque)}},nibble_pixel};
+    wire [7:0] byte_palette=sample_x[0] ? word_pixel[15:8] : word_pixel[7:0];
     always_comb begin
         palette_index=0;
         if(enabled && display_hit)

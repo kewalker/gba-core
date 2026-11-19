@@ -6,15 +6,18 @@ module gba_mosaic_coordinate #(parameter integer COORD_BITS=10
     ,parameter bit CHECK_COORDINATE=1
 `endif
 )(input wire clk,input wire [9:0] coordinate,input wire [3:0] size,
-    output wire [9:0] snapped,output wire valid,output wire [3:0] remainder_value);
+    output wire [9:0] snapped,output wire valid,output wire [3:0] remainder_value,
+    output wire group_start);
     localparam integer COORDINATES=1<<COORD_BITS;
-    (* ramstyle="M10K" *) reg [COORD_BITS+3:0] lookup[0:16*COORDINATES-1];
+    (* ramstyle="M10K" *) reg [COORD_BITS+4:0] lookup[0:16*COORDINATES-1];
     initial for(integer divisor_index=0;divisor_index<16;divisor_index=divisor_index+1)
-        for(integer coordinate_index=0;coordinate_index<COORDINATES;coordinate_index=coordinate_index+1)
+        for(integer coordinate_index=0;coordinate_index<COORDINATES;coordinate_index=coordinate_index+1)begin
+            integer remainder;
+            remainder=coordinate_index % (divisor_index+1);
             lookup[divisor_index*COORDINATES+coordinate_index]=
-                ((coordinate_index-coordinate_index % (divisor_index+1))<<4) |
-                (coordinate_index % (divisor_index+1));
-    reg [COORD_BITS+3:0] decoded;
+                {remainder==0,COORD_BITS'(coordinate_index-remainder),4'(remainder)};
+        end
+    reg [COORD_BITS+4:0] decoded;
     reg [3:0] size_tag;
     reg [9:0] coordinate_tag;
     always @(posedge clk)begin
@@ -30,6 +33,7 @@ module gba_mosaic_coordinate #(parameter integer COORD_BITS=10
     assign valid=coordinate_tag==coordinate && size_tag==size;
 `endif
     assign remainder_value=decoded[3:0];
+    assign group_start=decoded[COORD_BITS+4];
 `ifdef GBK_SIM
     always @(posedge clk)if((coordinate>>COORD_BITS)!=0)$fatal(1,"Mosaic coordinate exceeds allocated ROM range");
 `endif

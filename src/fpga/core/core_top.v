@@ -340,6 +340,8 @@ always @(*) begin
         bridge_rd_data <= gba_save_bridge_rdata;
     end
     32'h10xxxxxx: begin
+        if(bridge_addr==32'h1000001C) bridge_rd_data <= gba_soft_colors_rdata;
+        else
 `ifdef GBK_FAST_FORWARD
         if(bridge_addr==32'h10000010 || bridge_addr==32'h10000014 || bridge_addr==32'h10000018) bridge_rd_data <= gba_fast_forward_rdata;
         else
@@ -370,6 +372,11 @@ assign gba_log_valid = 1'b0;
 assign gba_log_data = 0;
 `endif
     wire            reset_n;                // driven by host commands, can be used as core-wide reset
+    // reset_n is a bridge-clock register. Release it in each core clock
+    // through a synchronizer before it reaches logic in that domain.
+    wire core_video_reset,core_cpu_reset;
+    gba_reset_sync core_video_reset_sync(.clk(clk_core_12288),.reset_in(~reset_n),.reset_out(core_video_reset));
+    gba_reset_sync core_cpu_reset_sync(.clk(clk_core_39936),.reset_in(~reset_n),.reset_out(core_cpu_reset));
     wire    [31:0]  cmd_bridge_rd_data;
     
 // bridge host commands
@@ -774,12 +781,12 @@ wire       gba_diag_capture = gba_video_vs && !gba_diag_vs_d && !gba_diag_frozen
 reg [31:0] gba_log_previous_boot_counts;
 reg gba_restart_valid_previous;
 always @(posedge clk_core_39936) begin
-    if (!reset_n) begin gba_log_previous_boot_counts <= 0; gba_restart_valid_previous <= 0; end
+    if (core_cpu_reset) begin gba_log_previous_boot_counts <= 0; gba_restart_valid_previous <= 0; end
     else begin gba_log_previous_boot_counts <= gba_boot_counts; gba_restart_valid_previous <= gba_restart_valid; end
 end
 wire [351:0] gba_bios_wait_snapshot;
 gba_bios_wait_trace bios_wait_trace (
-    .clk(clk_core_39936), .reset(~reset_n),
+    .clk(clk_core_39936), .reset(core_cpu_reset),
     .execution_state(gba_debug_execution_state), .restart_context(gba_restart_context),
     .loaded_logo_word(gba_diag_logo_load_sync2),
     .irq_counts(gba_debug_irq_counts),
@@ -809,7 +816,7 @@ gba_runtime_log #(.PERIOD_CYCLES(39936000),.DIAGNOSTIC_SAMPLES(1),.DIAGNOSTIC_KI
 );
 wire [31:0] gba_boot_counts, gba_boot_last_cart_pc, gba_boot_reset_from_pc;
 gba_boot_trace boot_trace (
-    .clk(clk_core_39936), .reset(~reset_n), .pc(gba_debug_pc),
+    .clk(clk_core_39936), .reset(core_cpu_reset), .pc(gba_debug_pc),
     .entry_counts(gba_boot_counts), .last_cart_pc(gba_boot_last_cart_pc),
     .reset_from_pc(gba_boot_reset_from_pc)
 );
@@ -849,7 +856,7 @@ always @(posedge clk_74a) begin
 end
 
 always @(posedge clk_core_12288) begin
-    if (!reset_n) begin
+    if (core_video_reset) begin
         gba_diag_pc_frame <= 32'b0;
         gba_diag_bias_count_frame <= 32'b0;
         gba_diag_bias_r12_frame <= 32'b0;
@@ -1181,9 +1188,17 @@ assign gba_video_rgb_raw = {gba_video_r[8:1], gba_video_g[8:1], gba_video_b[8:1]
 `endif
 wire [23:0] gba_apf_rgb;
 wire gba_apf_de,gba_apf_skip,gba_apf_hs,gba_apf_vs;
+wire [23:0] gba_video_rgb_filtered;
+wire [31:0] gba_soft_colors_rdata;
+gba_soft_colors soft_colors(
+    .host_clk(clk_74a),.video_clk(clk_core_12288),.video_reset(core_video_reset),
+    .bridge_wr(bridge_wr),.bridge_rd(bridge_rd),.bridge_endian_little(bridge_endian_little),
+    .bridge_addr(bridge_addr),.bridge_wr_data(bridge_wr_data),
+    .bridge_rdata(gba_soft_colors_rdata),.frame_start(gba_apf_vs),
+    .rgb_in(gba_video_rgb_raw),.rgb_out(gba_video_rgb_filtered));
 gba_apf_video_out video_output (
-    .clk(clk_core_12288), .reset(~reset_n),
-    .rgb_in(gba_video_rgb_raw),
+    .clk(clk_core_12288), .reset(core_video_reset),
+    .rgb_in(gba_video_rgb_filtered),
     .de_in(gba_video_de), .skip_in(gba_video_skip),
     .hs_region(gba_video_hs), .vs_region(gba_video_vs),
     .rgb(gba_apf_rgb), .de(gba_apf_de), .skip(gba_apf_skip), .hs(gba_apf_hs), .vs(gba_apf_vs)
@@ -1207,7 +1222,7 @@ wire [2:0] gba_overlay_corner;
 wire gba_overlay_wall_valid;
 wire [15:0] gba_overlay_wall;
 wire [27:0] gba_overlay_session,gba_overlay_total;
-gba_playtime_host #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE)) playtime_host(.clk(clk_74a),.video_clk(clk_core_12288),.video_reset(~reset_n),
+gba_playtime_host #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE)) playtime_host(.clk(clk_74a),.video_clk(clk_core_12288),.video_reset(core_video_reset),
 `ifdef GBK_SAVESTATE
 `ifdef GBK_POCKET_STATE
     .state_rtc_lock(pstate_rtc_lock),.state_rtc_start(pstate_rtc_start),.state_rtc_restore(pstate_rtc_restore),.state_rtc_word_write(pstate_rtc_write),
@@ -1219,7 +1234,11 @@ gba_playtime_host #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE)) playtime_host(.clk(cl
     .state_rtc_ready(),.state_rtc_busy(),.state_rtc_done(),.state_rtc_error(),
 `endif
 `endif
-    .running(reset_n),.in_menu(osnotify_inmenu),.guest_stopped(gba_guest_stopped),
+    .running(reset_n),.in_menu(osnotify_inmenu
+`ifdef GBK_POCKET_STATE
+        || savestate_start_busy || savestate_load_busy
+`endif
+    ),.guest_stopped(gba_guest_stopped),
     .bridge_wr(bridge_wr),.bridge_rd(bridge_rd),.endian_little(bridge_endian_little),
     .bridge_addr(bridge_addr),.bridge_wr_data(bridge_wr_data),
     .host_toggle(rtc_update_toggle),.host_valid(rtc_valid),.host_time_bcd(rtc_time_bcd),
@@ -1231,7 +1250,7 @@ gba_playtime_host #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE)) playtime_host(.clk(cl
     .video_show(gba_overlay_show),.video_corner(gba_overlay_corner),
     .video_wall_valid(gba_overlay_wall_valid),.video_wall(gba_overlay_wall),
     .video_session(gba_overlay_session),.video_total(gba_overlay_total));
-gba_playtime_overlay playtime_overlay(.clk(clk_core_12288),.reset(~reset_n),
+gba_playtime_overlay playtime_overlay(.clk(clk_core_12288),.reset(core_video_reset),
     .rgb_in(gba_apf_rgb),.de_in(gba_apf_de),.skip_in(gba_apf_skip),.hs_in(gba_apf_hs),.vs_in(gba_apf_vs),
     .show(gba_overlay_show),.corner(gba_overlay_corner),.wall_valid(gba_overlay_wall_valid),
     .wall_hhmm(gba_overlay_wall),.session_hhmm(gba_overlay_session),.total_hhmm(gba_overlay_total),
@@ -1402,7 +1421,7 @@ gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTE
 `ifdef GBK_POCKET_STATE
     .state_cpu_request(pstate_cpu_request),.state_dma_request(pstate_dma_request),.state_hold(pstate_hold),
     .state_reg_write(pstate_reg_write),.state_reg_addr(pstate_reg_addr),.state_reg_wdata(pstate_reg_wdata),
-    .state_save_raw_access(pstate_save_access),.state_save_raw_eeprom(pstate_save_eeprom),
+    .state_save_raw_access(pstate_save_access),.state_save_raw_eeprom(pstate_save_eeprom && pstate_save_access),
     .state_save_raw_idle(pstate_save_idle),.state_save_raw_done(pstate_save_done),
     .state_cpu_quiescent(pstate_cpu_idle),.state_dma_quiescent(pstate_dma_idle),.state_held(pstate_held),
     .state_reg_valid(pstate_reg_valid),.state_reg_rdata(pstate_reg_rdata),
@@ -2216,9 +2235,9 @@ gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTE
     reg [9:0]   square_x = 'd135;
     reg [9:0]   square_y = 'd95;
 
-always @(posedge clk_core_12288 or negedge reset_n) begin
+always @(posedge clk_core_12288 or posedge core_video_reset) begin
 
-    if(~reset_n) begin
+    if(core_video_reset) begin
     
         x_count <= 0;
         y_count <= 0;

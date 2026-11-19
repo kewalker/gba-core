@@ -785,10 +785,13 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/top/gba_boot_trace.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/ppu/gba_framebuffer_ram.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/top/gba_system_top.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/top/gba_stop_resync.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/top/gba_reset_sync.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/top/gba_fast_forward.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/top/gba_startup_reset.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/top/gba_cycle_scheduler.sv
 set_global_assignment -name SDC_FILE core/core_constraints.sdc
+set_global_assignment -name SDC_FILE core/ppu_text_map_fit.sdc
+set_global_assignment -name SDC_FILE core/ppu_obj_route_fit.sdc
 set_global_assignment -name SIGNALTAP_FILE core/stp1.stp
 set_global_assignment -name QIP_FILE core/mf_pllbase.qip
 set_global_assignment -name SIP_FILE core/mf_pllbase.sip
@@ -820,7 +823,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_rtc_persistence
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/overlay/gba_rtc_persistence_link.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/overlay/gba_save_datatable.sv
 
-set_global_assignment -name SEED 13
+set_global_assignment -name SEED 31
 set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 3.0
 set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
 
@@ -970,3 +973,13 @@ set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to dram_dq[12]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to dram_dq[13]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to dram_dq[14]
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to dram_dq[15]
+
+# The GBA multiplayer bus releases the shared lines between words.
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to port_tran_si
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to port_tran_sd
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to port_tran_sck
+
+set_global_assignment -name VERILOG_MACRO GBK_CPU_OVERLAP
+set_global_assignment -name VERILOG_MACRO GBK_SHARED_ARM_SHIFT
+set_global_assignment -name VERILOG_MACRO GBK_SHARED_ARM_ADD
+set_global_assignment -name VERILOG_MACRO GBK_SHARED_THUMB_SHIFT

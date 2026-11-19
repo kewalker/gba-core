@@ -5,11 +5,11 @@
   },
   {
     "path": "Cores/BitBird.GBA/bitstream.rbf_r",
-    "sha256": "4baa961883ebbbad57cf20f6d9ea891a49b0eea1de93e3ec4148f09d902834c7"
+    "sha256": "4a975bf37396e7d62331265bffb53dc106bddf98ddd1e21cf7425c9b61c6b341"
   },
   {
     "path": "Cores/BitBird.GBA/core.json",
-    "sha256": "46eb6df50b275c52bc7e391afd9201d850d7dca2f37df3c1812767dd16131931"
+    "sha256": "f8175823ded127daf8266da7b226b8ea315eba427f939739ec6309e3b5dd5850"
   },
   {
     "path": "Cores/BitBird.GBA/data.json",
@@ -25,7 +25,7 @@
   },
   {
     "path": "Cores/BitBird.GBA/interact.json",
-    "sha256": "814656d658b6c2df110d71859b15175a8402c257089f0fcb7b4ea76c5fe13884"
+    "sha256": "c1f4926dca969c1579730bbab101d022b397346266aa27b7badf145ef643c49a"
   },
   {
     "path": "Cores/BitBird.GBA/variants.json",
@@ -41,6 +41,6 @@
   },
   {
     "path": "README.md",
-    "sha256": "b97450f65aa5ecd2807ab59667dc2638c6803f9b4f8a194939d28ea291a33a33"
+    "sha256": "079d71c9ceb41fca0fbc80e967c9b499d32bd96b27542246d82d2c80bc23509b"
   }
 ]

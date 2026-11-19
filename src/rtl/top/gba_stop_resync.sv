@@ -30,8 +30,10 @@ module gba_stop_resync (
             endcase
         end
     end
+    wire video_reset;
+    gba_reset_sync video_reset_sync(.clk(video_clk),.reset_in(reset),.reset_out(video_reset));
     always @(posedge video_clk) begin
-        if(reset) begin request_sync<=0;video_blank<=0;end
+        if(video_reset) begin request_sync<=0;video_blank<=0;end
         else begin
             request_sync<={request_sync[1:0],request};
             if(request_sync[2]) video_blank<=1;

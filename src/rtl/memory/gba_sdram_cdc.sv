@@ -29,9 +29,11 @@ module gba_sdram_cdc(
  assign {memory_write,memory_addr,memory_wdata,memory_byteena}=descriptor_sync2;
  assign memory_valid=request_sync[2]!=request_seen && !accepted;
  assign response_ready=accepted;
+ wire client_side_reset;
+ gba_reset_sync client_side_reset_sync(.clk(client_clk),.reset_in(reset),.reset_out(client_side_reset));
  always @(posedge client_clk) begin
   client_ready<=0;
-  if(reset) begin
+  if(client_side_reset) begin
    request_toggle<=0;descriptor<=0;response_sync<=0;response_seen<=0;
    data_sync1<=0;data_sync2<=0;client_rdata<=0;client_state<=0;discard_response<=0;
   end else begin

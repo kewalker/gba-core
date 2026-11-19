@@ -30,6 +30,8 @@ module gba_state_machine_access #(
     output wire [31:0] rtc_word_data,
     input wire [31:0] rtc_word_rdata
 );
+    wire guest_reset;
+    gba_reset_sync guest_reset_sync(.clk(guest_clk),.reset_in(reset),.reset_out(guest_reset));
     // Hold the complete descriptor before routing it. Virtual section address
     // translation must not also drive the save/RTC response and payload enables
     // in the same host cycle. One outstanding request keeps cancellation and
@@ -75,7 +77,7 @@ module gba_state_machine_access #(
         .source_response_ready(routed_response_ready && held_target<2),.source_target(held_target[0]),
         .source_addr(held_addr),.source_wdata(held_wdata),.source_ready(crossing_ready),
         .source_response(crossing_response),.source_busy(),.source_error(crossing_error),.source_rdata(crossing_data),
-        .destination_clk(guest_clk),.destination_cancel(reset || !guest_held),
+        .destination_clk(guest_clk),.destination_cancel(guest_reset || !guest_held),
         .destination_valid,.destination_write,.destination_response_ready(destination_reply_ready),
         .destination_target,.destination_addr,.destination_wdata(destination_data),
         .destination_ready(destination_target ? ram_ready : register_ready),
@@ -83,7 +85,7 @@ module gba_state_machine_access #(
         .destination_error(destination_target ? ram_error : register_error),
         .destination_rdata(destination_target ? ram_rdata : register_result));
     gba_state_register_access #(.TIMEOUT_CYCLES(TIMEOUT_CYCLES)) registers(
-        .clk(guest_clk),.cancel(reset),.held(guest_held),
+        .clk(guest_clk),.cancel(guest_reset),.held(guest_held),
         .request_valid(destination_valid && !destination_target),.request_write(destination_write),
         .response_ready(destination_reply_ready && !destination_target),
         .request_addr(destination_addr),.request_wdata(destination_data),.request_ready(register_ready),

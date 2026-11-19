@@ -1,3 +1,25 @@
+# 0.2.0 full-feature rebuild
+
+Quartus Prime Lite 18.1 compiled the full-feature public FPGA source with
+fitter seed 31. Minimum setup slack was +0.612 ns and minimum hold slack was
++0.132 ns; recovery and removal checks now cover the reset synchronizers.
+All 23 physical audits passed, including the Soft Colors setting crossing and
+a reset clock-domain audit that found no reset crossing a clock domain outside
+a synchronizer. The rebuilt bitstream matches the hardware-tested 0.2.0
+candidate byte for byte. See the [0.2.0 build receipt](build-validation-0.2.0-receipt.json).
+
+Development simulation covered the CPU, graphics, RTC, startup and save-boot,
+overlay, serial and save-state stages, the Soft Colors filter and the link
+multiplayer peer model. Save-state CPU timing was compared against the same
+CPU built without save-state support.
+
+On Pocket, the candidate with the reset fix booted Pokemon Emerald in 20+
+launches without the black-screen hang seen in about 1 of 10 launches before.
+The release package then linked Pokemon Emerald with a GBA SP in every cable
+orientation and start order tested, and passed Emerald launches, a Memory
+capture and load, sleep/wake, Soft Colors and fast-forward. The link port
+needs cart power, so core.json keeps the cartridge slot powered.
+
 # 0.1.2 full-feature rebuild
 
 Quartus Prime Lite 18.1 compiled the full-feature public FPGA source.
