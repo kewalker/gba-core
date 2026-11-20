@@ -18,4 +18,4 @@ Pocket Memories and sleep/wake serve a different purpose.
 as described in [license scope](LICENSE-SCOPE.md). Analogue and Intel/Altera
 files retain their existing terms; see [credits/notices](THIRD_PARTY_NOTICES.md).
 See [SOURCE.md](SOURCE.md) for the matching source commit and companion archive.
-The package is provided without warranty. Cable multiplayer remains experimental.
+The package is provided without warranty.

@@ -7,8 +7,6 @@
   a fixed multiplier or a promise to beat 2x in every game or scene. In
   CPU-saturated scenes the fixed 1.5x and 2x speeds can show little gain,
   because the game drops to every other frame; Max adapts instead.
-- Link-port/multiplayer logic is experimental. Real cable/game interoperability
-  is not release-qualified; enabling the port does not establish compatibility.
 - Save states and sleep/wake have positive user test reports. Cross-core and
   cross-identity Memories are unverified. Preserve normal game saves.
 - Cartridge RTC has positive reports, but rare cartridge peripherals and all

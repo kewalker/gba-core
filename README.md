@@ -14,7 +14,8 @@ A Game Boy Advance compatible openFPGA core for Analogue Pocket. Version
 - Pocket LCD/CRT display modes for the native 240x160, 3:2 picture.
 - Optional Soft Colors: a mild, persistent desaturation in the core menu.
 
-Cable multiplayer is experimental. See [known limitations](docs/known-issues.md)
+Link-cable play has been tested by trading in Pokémon Emerald between an
+Analogue Pocket and a Game Boy Advance SP. See [known limitations](docs/known-issues.md)
 for support boundaries; compatibility is not an exhaustive all-games claim.
 
 ## Installation
@@ -53,7 +54,7 @@ hardware documentation and reference projects:
 - **Arm** — ARM7TDMI technical documentation used for instruction behavior and timing research.
 - **Jeffrey Pfau and mGBA contributors** — [mGBA](https://github.com/mgba-emu/mgba), consulted for memory, DMA, save-device and power-management behavior.
 - **MiSTer GBA contributors, mincer-ray and wolfshow** — [MiSTer GBA](https://github.com/MiSTer-devel/GBA_MiSTer), [mincer-ray's Pocket port](https://github.com/mincer-ray/openfpga-GBA), and [wolfshow's Pocket fork](https://github.com/wolfshow/openfpga-GBA), inspected for architecture, cycle accounting, cache behavior and Pocket integration comparisons.
-- **Stephen Stair** — [GBA communication hardware notes](https://www.akkit.org/info/gba_comms.html), consulted for experimental multiplayer work.
+- **Stephen Stair** — [GBA communication hardware notes](https://www.akkit.org/info/gba_comms.html), consulted for multiplayer work.
 - **gbadev / gbadoc contributors** — [sound hardware documentation](https://gbadev.net/gbadoc/audio/sound4.html), consulted for PSG noise behavior.
 - **pret and zeldaret contributors** — [pokeemerald](https://github.com/pret/pokeemerald), [pokefirered](https://github.com/pret/pokefirered) and [The Minish Cap reconstruction](https://github.com/zeldaret/tmc), consulted while investigating palette and save compatibility.
 - **Alliance Memory** — device data sheets used in Pocket memory-interface timing work.

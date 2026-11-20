@@ -13,8 +13,8 @@ by default, persists, and switches at a frame boundary.
 
 Improve physical link-cable multiplayer: the serial port keeps a fixed cable
 clock while the CPU runs fast, handles delayed, missing and noisy peers and
-early hand-offs, and the link lines use weak pull-ups. Cable multiplayer
-remains experimental.
+early hand-offs, and the link lines use weak pull-ups. Tested by trading in
+Pokémon Emerald between an Analogue Pocket and a Game Boy Advance SP.
 
 Run CPU-heavy scenes faster, which also helps fast-forward, by overlapping
 instruction fetches. Fix ARM data-processing instructions that write the PC,
