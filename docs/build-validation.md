@@ -1,3 +1,21 @@
+# 0.2.1 full-feature rebuild
+
+Quartus Prime Lite 18.1 compiled the full-feature public FPGA source with
+fitter seed 31. Minimum setup slack was +0.590 ns and minimum hold slack was
++0.111 ns. All 23 physical audits passed, including the reset clock-domain
+audit. The rebuilt bitstream matches the development candidate byte for byte.
+See the [0.2.1 build receipt](build-validation-0.2.1-receipt.json).
+
+Development simulation covered the ARM and Thumb CPU benches, including a new
+check of word, halfword and signed loads at every byte offset (104 cases),
+five real-BIOS service runs (IRQ wait, division, unpack, header copy and
+header validation), and a cartridge that reads the BIOS and unmapped memory
+after the real BIOS hands over. That test fails with BIOS read protection
+removed.
+
+On Pocket, The Minish Cap got past the New Game opening cutscene, Link rolled
+with R while walking, and a previously working game still booted.
+
 # 0.2.0 full-feature rebuild
 
 Quartus Prime Lite 18.1 compiled the full-feature public FPGA source with

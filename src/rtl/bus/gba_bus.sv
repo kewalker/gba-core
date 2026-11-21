@@ -462,7 +462,35 @@ module gba_bus #(
         .debug_runtime_memory, .irq(peripheral_irq), .halt_wake(halt_wake)
     );
 
-    assign cpu_rdata = mem_rdata;
+    // BIOS read protection. Code running outside the BIOS cannot read it: a
+    // CPU data read of 0x00000000-0x00003FFF then returns the last opcode the
+    // BIOS fetched (0xE129F000 after the boot handoff). Games depend on it:
+    // The Minish Cap reads a NULL entity's interactType (address 0x39) to
+    // choose the R-button Roll action.
+    logic [31:0] bios_open_bus=32'he129f000;
+    wire cpu_bios_region=cpu_addr[31:14]==0;
+    wire cpu_in_bios=debug_pc[31:14]==0;
+    // Unmapped memory (0x01000000-0x01FFFFFF and 0x10000000 and above) reads
+    // as open bus: the most recently fetched opcode, a Thumb halfword
+    // duplicated in both halves. The Minish Cap's animation stepper walks a
+    // garbage pointer there after its New Game cutscene; the opcode bytes are
+    // nonzero frame durations, so on hardware it returns, while zeros made it
+    // spin and starve the game (black screen).
+    logic [31:0] cpu_open_bus=32'd0;
+    wire [15:0] cpu_fetched_half=cpu_addr[1] ? mem_rdata[31:16] : mem_rdata[15:0];
+    wire cpu_unmapped=cpu_addr[31:28]!=0 || cpu_addr[31:24]==8'h01;
+    always_ff @(posedge clk) begin
+        if(reset)begin
+            bios_open_bus<=32'he129f000;
+            cpu_open_bus<=32'd0;
+        end else if(cpu_req && mem_ready && !cpu_write && timing_code)begin
+            if(cpu_bios_region)bios_open_bus<=mem_rdata;
+            cpu_open_bus<=timing_thumb ? {cpu_fetched_half,cpu_fetched_half} : mem_rdata;
+        end
+    end
+    assign cpu_rdata = timing_code ? mem_rdata :
+        (cpu_bios_region && !cpu_in_bios) ? bios_open_bus :
+        cpu_unmapped ? cpu_open_bus : mem_rdata;
     assign cpu_ready = mem_ready;
 
     // Simulation-only observability is intentionally exposed at the bus

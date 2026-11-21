@@ -116,6 +116,8 @@ module arm7tdmi_core #(
     // Emerald's BlendPalette deliberately loads words at palette+2.
     logic [31:0] load_word_data;
     wire [31:0] load_bus_data=swap_active && swap_write_phase ? swap_result : bus_rdata;
+    // The aligned halfword containing the address.
+    wire [15:0] load_half_word=bus_addr[1] ? load_bus_data[31:16] : load_bus_data[15:0];
     always_comb begin
         case(bus_addr[1:0])
             2'd0: load_word_data=load_bus_data;
@@ -1571,11 +1573,15 @@ module arm7tdmi_core #(
                     write_main(load_rd,data_signed
                         ? {{24{load_bus_data[(bus_addr[1:0] * 8) + 7]}}, load_bus_data[(bus_addr[1:0] * 8) +: 8]}
                         : (load_bus_data >> (bus_addr[1:0] * 8)) & 32'h000000ff);
+                // ARM7TDMI odd-address halfword loads: LDRH returns the
+                // aligned halfword rotated right by 8, and LDRSH loads the
+                // addressed byte sign-extended (as LDRSB).
                 else if (data_half && load_rd != 4'hF)
                     write_main(load_rd,data_signed
-                        ? (bus_addr[1] ? {{16{load_bus_data[31]}}, load_bus_data[31:16]} :
-                                         {{16{load_bus_data[15]}}, load_bus_data[15:0]})
-                        : (load_bus_data >> (bus_addr[1] * 16)) & 32'h0000ffff);
+                        ? (bus_addr[0] ? {{24{load_half_word[15]}}, load_half_word[15:8]} :
+                                         {{16{load_half_word[15]}}, load_half_word})
+                        : (bus_addr[0] ? {load_half_word[7:0], 16'd0, load_half_word[15:8]} :
+                                         {16'd0, load_half_word}));
                 else if (load_rd != 4'hF)
                     write_main(load_rd,load_word_data);
             end

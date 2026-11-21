@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.1 — 2026-11-20
+
+Fix The Legend of Zelda: The Minish Cap: Link can Roll with R while walking,
+and a New Game no longer goes to a black screen after the opening cutscene.
+
+- **BIOS read protection**: code running outside the BIOS now reads the last
+  opcode the BIOS fetched, not the BIOS contents, as on a GBA. The Minish Cap
+  relies on this to offer Roll.
+- **Open bus**: reads of unmapped memory return the most recently fetched
+  opcode instead of zero. After its New Game cutscene The Minish Cap reads
+  animation data from such an address, and zeros made it loop forever.
+- **ARM halfword loads**: LDRH from an odd address returns the aligned
+  halfword rotated by 8 bits, and LDRSH from an odd address loads the
+  addressed byte sign-extended, as on an ARM7TDMI.
+
+Saves, settings, Memories and playtime/RTC sidecars from 0.2.0 carry over
+unchanged.
+
 ## 0.2.0 — 2026-11-20
 
 Fix an intermittent black screen at startup, before the BIOS logo. The core's

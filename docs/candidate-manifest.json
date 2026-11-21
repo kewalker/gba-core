@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "identity": "BitBird.GBA",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "release_version": {
-    "version": "0.2.0",
-    "tag": "v0.2.0",
+    "version": "0.2.1",
+    "tag": "v0.2.1",
     "date": "2026-11-20"
   },
-  "image_sha256": "4a975bf37396e7d62331265bffb53dc106bddf98ddd1e21cf7425c9b61c6b341",
+  "image_sha256": "7a976b5e83f0dc719b1f4ee0d9f90becee58203e18bdf7e318e2b3949b0622fe",
   "timing": {
-    "setup_ns": 0.612,
-    "hold_ns": 0.132,
-    "alms": 17222,
+    "setup_ns": 0.59,
+    "hold_ns": 0.111,
+    "alms": 17297,
     "physical_audits": 23
   },
-  "scope": "Full-feature public source rebuild with passing timing and 23 physical audits; image identical to the hardware-tested 0.2.0 candidate.",
+  "scope": "Full-feature public source rebuild with passing timing and 23 physical audits; image identical to the hardware-tested 0.2.1 candidate.",
   "files": [
     {
       "path": "src/fpga/ap_core.qpf",
@@ -248,12 +248,12 @@
     },
     {
       "path": "src/rtl/bus/gba_bus.sv",
-      "sha256": "0a5f6dc5f64bc4a47321ae94919031423441626d5d2a2324dce18df0b5621f8b",
+      "sha256": "e78a0406376fe232a875a970430972b43e5d023801ec737061e5686feffa063e",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/cpu/arm7tdmi_core.sv",
-      "sha256": "d2c94c801bbe1c2610b1d89f172a9bbdbe49663ccfe1b245ffc5c0a004a7402c",
+      "sha256": "2dff25a0d5b1e29ae127c4b234f0bdba3936f417a0fc648396b96a5115d7092c",
       "kind": "qualified-source"
     },
     {
@@ -673,12 +673,12 @@
     },
     {
       "path": "pocket/manifest.json",
-      "sha256": "3196f202d1b25f32aca939a693034d534d35632266887de70fe9ecd457d706ce",
+      "sha256": "479d1290a09583cf5282d4a06e831ef825d77bb93bd9debdf85878224deb1906",
       "kind": "release-metadata"
     },
     {
       "path": "pocket/README.md",
-      "sha256": "079d71c9ceb41fca0fbc80e967c9b499d32bd96b27542246d82d2c80bc23509b",
+      "sha256": "9e3b76f5a2ac725b811916ab11f996c504f21656800244be929129ae7c82c09e",
       "kind": "release-metadata"
     },
     {
@@ -688,12 +688,12 @@
     },
     {
       "path": "pocket/Cores/BitBird.GBA/bitstream.rbf_r",
-      "sha256": "4a975bf37396e7d62331265bffb53dc106bddf98ddd1e21cf7425c9b61c6b341",
+      "sha256": "7a976b5e83f0dc719b1f4ee0d9f90becee58203e18bdf7e318e2b3949b0622fe",
       "kind": "timing-validated-image"
     },
     {
       "path": "pocket/Cores/BitBird.GBA/core.json",
-      "sha256": "f8175823ded127daf8266da7b226b8ea315eba427f939739ec6309e3b5dd5850",
+      "sha256": "8dad528d56a0a8b8e5fac6e73ccedc0b31d86503265c3d61fb50b93bc6eacaaa",
       "kind": "release-metadata"
     },
     {
@@ -785,11 +785,16 @@
       "path": "docs/build-validation-0.2.0-receipt.json",
       "sha256": "2f72679e59dcd2604382279c1f8d8175aa68905ac459a58ecf8b969aa69cdf1e",
       "kind": "build-validation"
+    },
+    {
+      "path": "docs/build-validation-0.2.1-receipt.json",
+      "sha256": "7f8de64c0264a03dc742a91be79ac14692cae9f152997c407f63c3e6464b4761",
+      "kind": "build-validation"
     }
   ],
   "hardware_acceptance": {
     "new_hardware_test": true,
-    "date": "2026-11-19",
-    "scope": "Owner Pocket test of the identical image: Emerald boot (20+ launches on the reset fix), GBA SP link in all tested orientations, Memory, sleep/wake, Soft Colors, fast-forward"
+    "date": "2026-11-20",
+    "scope": "Owner Pocket test of the identical image: The Minish Cap New Game past the opening cutscene, Roll while walking, and a previously working game booting"
   }
 }
