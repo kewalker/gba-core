@@ -5,6 +5,9 @@ A Game Boy Advance compatible openFPGA core for Analogue Pocket. Version
 
 ## Features
 
+- **Play Cartridge** (0.3.0, draft): play GBA Game Paks directly, with saves
+  written back to the cartridge automatically and backed up to the SD card.
+  See [playing cartridges](docs/installation.md#playing-cartridges).
 - Game saving and RTC persistence.
 - Pocket Memories/save states and sleep/wake, supported in reported tests.
 - Hold-X or menu-controlled fast-forward: 1.5x, 2x and workload-dependent Max.

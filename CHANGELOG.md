@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.3.0 — unreleased (draft)
+
+Play GBA cartridges directly. Insert a Game Boy Advance Game Pak and choose
+**Play Cartridge** in the Pocket's file browser: the core reads the game from
+the cartridge and plays it with BitBird's features, including Memories,
+fast-forward and the playtime overlays.
+
+- **Any cartridge**: the core reads the header, measures the ROM size and
+  detects the save type from the cartridge itself, so it needs no game list.
+  ROMs up to 32 MiB are supported.
+- **Saves go back to the cartridge automatically** about 10 seconds after the
+  game saves, and before you quit. Supported save types: SRAM, 64 KiB Flash
+  (Macronix, SST, Panasonic), 128 KiB Flash (Macronix, Sanyo) and EEPROM
+  (512 B and 8 KiB).
+- **Backups on the SD card**: before the first write of each session, the
+  cartridge's save is copied to `Saves/gba/BitBird.GBA/<CODE>-NN.sav` and read
+  back. The last eight are kept.
+- **Nothing is lost**: if a cartridge can't take a save (an unsupported Flash
+  chip, or a contact problem the core detects), the session is saved to
+  `Saves/gba/BitBird.GBA/<CODE>-unsaved.sav` instead.
+- **Loading screen**: a "Loading..." progress bar is shown while the cartridge
+  is copied.
+
+Tested with Pokémon FireRed (128 KiB Flash), Golden Sun (64 KiB Flash), Final
+Fantasy I & II: Dawn of Souls (SRAM) and The Legend of Zelda: The Minish Cap
+(EEPROM), including Memories in cartridge games.
+
+Sound state in Memories is now saved bit-serially, which frees FPGA space;
+Memories from 0.2.x still load. Saves, settings, Memories and playtime/RTC
+sidecars from 0.2.x carry over unchanged.
+
 ## 0.2.1 — 2026-11-20
 
 Fix The Legend of Zelda: The Minish Cap: Link can Roll with R while walking,

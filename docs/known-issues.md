@@ -19,4 +19,9 @@
 - The portable build has been tested on Windows with Quartus Lite 18.1. Linux
   builds and a complete portable functional regression suite remain unverified.
 
+- Play Cartridge (0.3.0, draft): Atmel 64 KiB Flash cartridges are played but
+  not written; their saves go to `<CODE>-unsaved.sav`. Cartridges with a clock
+  use BitBird's clock rather than the cartridge's, so in-game time can differ
+  from the Pocket's own cartridge mode.
+
 See [validation](build-validation.md) for the build, simulation and hardware test scope.

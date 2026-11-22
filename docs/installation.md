@@ -41,6 +41,39 @@ core-specific. Folder rules are documented by Analogue in
 [SD folder structure](https://www.analogue.co/developer/docs/openfpga/directories-and-sd-folder-structure)
 and [data slots](https://www.analogue.co/developer/docs/openfpga/core-definition-files/data-json).
 
+## Playing cartridges
+
+From 0.3.0 the core can play a Game Boy Advance Game Pak inserted in the
+Pocket. Open GBA by BitBird and choose **Play Cartridge** in the file browser.
+A "Loading..." bar shows while the game is copied from the cartridge; the GBA
+BIOS logo follows. The BIOS is still needed at `Assets/gba/common/gba_bios.bin`.
+
+The game runs with BitBird's features, including Memories, fast-forward and
+the overlays.
+
+**Saves.** Save in the game as usual. About 10 seconds after the game saves,
+and again before you quit, the core writes the change back to the cartridge,
+so the same save also works in the Pocket's own cartridge mode and on a GBA.
+Quitting waits for a write in progress. Loading a Memory does not change the
+cartridge until the game saves again.
+
+Supported cartridge save types: SRAM, 64 KiB Flash (Macronix, SST, Panasonic),
+128 KiB Flash (Macronix, Sanyo), and 512 B and 8 KiB EEPROM.
+
+**Backups.** Before its first write in a session, the core copies the
+cartridge's save to `Saves/gba/BitBird.GBA/<CODE>-NN.sav` (`<CODE>` is the
+game's four-letter code, such as `BPRE`) and reads the copy back. It keeps the
+last eight, `-00` to `-07`; `<CODE>-bk.idx` records which is next. To restore
+one, write it to the cartridge with a cartridge save tool.
+
+If a cartridge can't take a save, for example a Flash chip the core does not
+write or a dirty contact it detects, the core leaves the cartridge untouched
+and saves the session to `Saves/gba/BitBird.GBA/<CODE>-unsaved.sav`.
+
+**Tips.** Clean the cartridge contacts if a game does not start. Carts with a
+clock (such as Pokémon Ruby, Sapphire and Emerald) use BitBird's clock, which
+is kept in the game's `.gbkstat` file like any other game.
+
 ## Controls and settings
 
 Pocket A/B, L/R, Start, Select and the D-pad provide the corresponding GBA
