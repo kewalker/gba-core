@@ -1450,6 +1450,12 @@ assign gba_log_data = 0;
         .bios_offset({8'd0,bridge_addr[23:0]}),.load_data(gba_rom_or_bios_load_data),
         .ready(pstate_identity_ready),.rom_crc(pstate_rom_crc),.rom_bytes(pstate_rom_bytes),.bios_crc(pstate_bios_crc));
     gba_state_host pstate_host(.clk(clk_74a),.reset(pstate_host_reset),.enabled(savestate_supported),
+`ifdef GBK_GAMEPAK_BOOT_RTC_INIT
+        // Sleep/wake resume asks for the state during the cartridge copy.
+        .identity_wait(cart_trial_selected && !cart_boot_failed && !cart_trial_rejected),
+`else
+        .identity_wait(1'b0),
+`endif
         .identity_ready(pstate_identity_ready && reset_n
 `ifdef GBK_GAMEPAK_BOOT_RTC_INIT
             && (!cart_trial_selected || (cart_boot_release_ack && gba_rtc_boot_ready))

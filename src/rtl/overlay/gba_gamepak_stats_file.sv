@@ -100,8 +100,11 @@ module gba_gamepak_stats_file #(
             end else begin
                 if(timeout_tick)elapsed<=elapsed+1'b1;
                 if(!command_done)saw_clear<=1;
-                if(&elapsed)begin phase<=FINISHED;done<=1;result<=4'hf;end
-                else if(command_done && saw_clear)begin
+                // A timeout releases startup but keeps the command pending.
+                // During sleep/wake APF answers only after its state load, so
+                // the file still attaches (and loads) once that reply arrives.
+                if(&elapsed && !done)begin done<=1;result<=4'hf;end
+                if(command_done && saw_clear)begin
                     submitted<=0;
                     case(phase)
                         PROBE:if(command_error==0)phase<=LOAD;

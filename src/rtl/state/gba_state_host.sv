@@ -6,6 +6,9 @@ module gba_state_host #(
     parameter integer TIMEOUT_CYCLES=7425000
 )(
     input wire clk,reset,enabled,identity_ready,owners_idle,
+    // Identity is still being established (Play Cartridge copy). A load that
+    // arrives meanwhile stays busy until identity is ready instead of failing.
+    input wire identity_wait,
     input wire capture_request,load_request,
     output reg capture_ack,load_ack,
     output wire capture_busy,load_busy,
@@ -75,7 +78,10 @@ module gba_state_host #(
             // A conflicting request is acknowledged with the active busy result;
             // it cannot replace its descriptor or clear its eventual result.
             if(new_request && phase==IDLE)begin
-                if(!enabled || !identity_ready || lifecycle_request || (new_capture && new_load))begin
+                // Sleep/wake resume: APF loads right after Reset Exit while the
+                // cartridge is still being copied. That load holds in DRAIN.
+                if(!enabled || lifecycle_request || (new_capture && new_load) ||
+                   (!identity_ready && !(new_load && identity_wait)))begin
                     if(new_capture)begin capture_ok<=0;capture_error<=1;end
                     if(new_load)begin load_ok<=0;load_error<=1;end
                 end else begin
@@ -86,8 +92,9 @@ module gba_state_host #(
             end
             case(phase)
                 IDLE:;
-                DRAIN:if(!transport_busy && (owners_idle || lifecycle_request))begin
-                    if(lifecycle_request || transport_fault)begin
+                DRAIN:if(!transport_busy && (owners_idle || lifecycle_request) &&
+                         (identity_ready || !identity_wait || lifecycle_request))begin
+                    if(lifecycle_request || transport_fault || !identity_ready)begin
                         fail_result();phase<=IDLE;clear_fault<=1;
                     end else phase<=START;
                 end
