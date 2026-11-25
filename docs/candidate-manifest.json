@@ -23,7 +23,7 @@
     },
     {
       "path": "src/fpga/ap_core.qsf",
-      "sha256": "5918c93f1cb55ce1e88ceb64c8121943d33d6ea4172b213e01610494856af896",
+      "sha256": "bb0566d9174824cdd231ac25899aec13e3e21379318bded7157db0a4a85743c2",
       "kind": "qualified-source"
     },
     {
@@ -93,17 +93,17 @@
     },
     {
       "path": "src/fpga/core/core_bridge_cmd.v",
-      "sha256": "a42be90d3e69833d4b0ba957cfe66b204dc5bc02d828160d285d575848070d2d",
+      "sha256": "d59e0811c2154ee215dceb9a9e4e918ce28438ac0a7392bf2abba22c1462ad35",
       "kind": "qualified-source"
     },
     {
       "path": "src/fpga/core/core_constraints.sdc",
-      "sha256": "349fb95588cd4949383931e669e87a309bbd7cabd944f7a7f8622b814fda5f54",
+      "sha256": "bf1b9f79cc1e5259a1ed68f6026b7d0eefb52d7a43295e67bcfa725f3a56f83c",
       "kind": "qualified-source"
     },
     {
       "path": "src/fpga/core/core_top.v",
-      "sha256": "5172af5ab39c1282a93e4966650d7b6061ab4e84ca0b4c6144dfda6ecb033fd7",
+      "sha256": "39bbdf0d9d109d7bf852cf641b77a3031a8f03de751d6503e5353aec459c7345",
       "kind": "qualified-source"
     },
     {
@@ -233,7 +233,7 @@
     },
     {
       "path": "src/rtl/apu/gba_apu.sv",
-      "sha256": "aefb57ca85de047212793d64c9c4faa9aeffc708a1bad036de81f9e5d936f9a1",
+      "sha256": "28640e1d344131f142e26a743e4510d4d55980a43f5e641d782a2ed51bddb6c3",
       "kind": "qualified-source"
     },
     {
@@ -243,17 +243,17 @@
     },
     {
       "path": "src/rtl/apu/gba_psg.sv",
-      "sha256": "a71e64b6dc2e6aa4907fd9aaa47a24f89da740d23e218db5a88253849ee3b4b9",
+      "sha256": "58356bd4ec670a3ccfbde9d757d7ac6f491875fcccb30957e6c91f97542ba0af",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/bus/gba_bus.sv",
-      "sha256": "e78a0406376fe232a875a970430972b43e5d023801ec737061e5686feffa063e",
+      "sha256": "0ea20805ee1bd4574b5c6145aa056ed8fba10fb52fd9eb9bb0cab04f697ab29d",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/cpu/arm7tdmi_core.sv",
-      "sha256": "2dff25a0d5b1e29ae127c4b234f0bdba3936f417a0fc648396b96a5115d7092c",
+      "sha256": "40ec3e2705b989b4ea809844bfbd4bff0ee601f558c764a2d17bfed582d85119",
       "kind": "qualified-source"
     },
     {
@@ -263,7 +263,7 @@
     },
     {
       "path": "src/rtl/dma/gba_dma.sv",
-      "sha256": "1b9183ceeb0874d19df055f1678530d15681f6e1080d168ebcf634a5d5022cd5",
+      "sha256": "246bbf3a51672ebf2031b988d221b1edfeedd8eda77660b1b1564ff70ecab99d",
       "kind": "qualified-source"
     },
     {
@@ -283,7 +283,7 @@
     },
     {
       "path": "src/rtl/memory/gba_cartridge_psram.sv",
-      "sha256": "b075489d6cf7f80131f17b4c0c63c74237f0189d7b872645de9229626c504867",
+      "sha256": "ccd4560462dabd2f3e44a1e0d5f3cee996bc38ba591a0a91f7d66425e8419c28",
       "kind": "qualified-source"
     },
     {
@@ -293,7 +293,7 @@
     },
     {
       "path": "src/rtl/memory/gba_eeprom.sv",
-      "sha256": "7705901976096b39b728472429175b301dacfdc9af011e5a7d3d6bad40c04fbf",
+      "sha256": "879efc8708439fe9388b47ec79864ca9cd174be31216344d85c1e77f7a4f0481",
       "kind": "qualified-source"
     },
     {
@@ -318,7 +318,7 @@
     },
     {
       "path": "src/rtl/memory/gba_flash.sv",
-      "sha256": "37b4fcdb421b1cfd013656a529a285c575211cdd2fdfafe2e1c0a52bbd723f86",
+      "sha256": "e413ccda38a18d811e18c134a6f80865b7bb1622ce5ad0f66ca72bebe40faa5a",
       "kind": "qualified-source"
     },
     {
@@ -333,12 +333,12 @@
     },
     {
       "path": "src/rtl/memory/gba_flash_sram.sv",
-      "sha256": "9eb21dd113d4906cd5c4746118418a3484564f9e8cd58afd145de8a16406f86c",
+      "sha256": "c10a82c721f1e8e465b01c42ce83a7d718d1995b8204d7bd7dc047887b4b8b1c",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/memory/gba_memory_map.sv",
-      "sha256": "cdf648144f1958764768bff180f3cebf6b2cf21beb14e06727c02c17f3408241",
+      "sha256": "8bed6a02da30161db527242990b7ce72d8779d432425295e12b43b484d676a8b",
       "kind": "qualified-source"
     },
     {
@@ -378,7 +378,7 @@
     },
     {
       "path": "src/rtl/memory/gba_save_sram_backend.sv",
-      "sha256": "9b89beedc6c89b8f52c52c5440eb1c770369f379d9dfa97726c85cb400816e91",
+      "sha256": "6263cfb013a18b56273cc991a285d3ace831caba75971722d8beb6fe96ddffc9",
       "kind": "qualified-source"
     },
     {
@@ -433,12 +433,12 @@
     },
     {
       "path": "src/rtl/overlay/gba_playtime_format.sv",
-      "sha256": "316378d39c5f08dc74806ae240437d50d141a0287570abb1898cdffc691dd19b",
+      "sha256": "30de5bc0c7b9c8665c1f42e5ee6a4d772993a920757539b98fa7417869d48afb",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/overlay/gba_playtime_host.sv",
-      "sha256": "966bb024076fc0d5f7eb25fd23306e056a38b1e17d58d024c72411b98c8ff753",
+      "sha256": "208784426ea78a896f3faff8f37cdfb7583c8b9bda70bbe247e4ab5876751c38",
       "kind": "qualified-source"
     },
     {
@@ -448,7 +448,7 @@
     },
     {
       "path": "src/rtl/overlay/gba_save_datatable.sv",
-      "sha256": "0b2d0ec4ae1c48a8903be616adbe64b12fd654087a6a8309a90ce636d8b1fb74",
+      "sha256": "8b82d53dc039a72f283c1cf47d86426951b3245f345494c6911491ac78f55397",
       "kind": "qualified-source"
     },
     {
@@ -473,7 +473,7 @@
     },
     {
       "path": "src/rtl/ppu/gba_ppu.sv",
-      "sha256": "4b6deeadcc53ee923bb2ff8b18dcfcbdf22ecadfc01d8c84a2d5e01e58f2b742",
+      "sha256": "849a9eed33c06743899704a69bde7702b1cd898818cc9cbb8126e99e000d0ff9",
       "kind": "qualified-source"
     },
     {
@@ -483,7 +483,7 @@
     },
     {
       "path": "src/rtl/serial/gba_serial.sv",
-      "sha256": "a005ddd9e1538596322045de54ce7185ed38a84eb932b0431ee8fcf90a1e1a74",
+      "sha256": "42fbf2d7b30d49ad8a04513b0c5858da733f5159938f4aeffb2aac1e323c07da",
       "kind": "qualified-source"
     },
     {
@@ -493,7 +493,7 @@
     },
     {
       "path": "src/rtl/state/gba_state_async_port.sv",
-      "sha256": "3ef8f7dec609356eb5389876d197adbcba50a4479b763c3f5c627379bc4632eb",
+      "sha256": "531ca6b592c9dbf7469ae077f502968c06945e9aad282493fef22aad2cab28c1",
       "kind": "qualified-source"
     },
     {
@@ -508,7 +508,7 @@
     },
     {
       "path": "src/rtl/state/gba_state_identity.sv",
-      "sha256": "01cf21aa8f5da38afc3e01aff4ec86de488c7fa6a89bb24fe19b5b707f6ec148",
+      "sha256": "640bb5554670ca942fc87d482718c4a31ee9c3f4ec32d3558fd4d2ed025d2608",
       "kind": "qualified-source"
     },
     {
@@ -518,12 +518,12 @@
     },
     {
       "path": "src/rtl/state/gba_state_machine.sv",
-      "sha256": "646739eca2847252f4836de38d094cf6add4a7ff5a27a5ee09e707a8bf69db43",
+      "sha256": "1872d937c7ad06ab64195ce956004642f6b233fefc4a2cdb384eb769447b91d2",
       "kind": "qualified-source"
     },
     {
       "path": "src/rtl/state/gba_state_machine_access.sv",
-      "sha256": "078b0c17d43ae33276e24ed4db67235bdf0034a517885957a46d294c425af91a",
+      "sha256": "65eefe2827f9fdb9756020f0077114a540b478388b57502b9c9cc981c2603028",
       "kind": "qualified-source"
     },
     {
@@ -543,7 +543,7 @@
     },
     {
       "path": "src/rtl/state/gba_state_register_access.sv",
-      "sha256": "3fc99035141dd6d08369d05b7ca071561c395143fc65db0f7488b827ac036aca",
+      "sha256": "53cad4a2464c39e0d37bdfdbac08efa8ff8a6cf3b12217eb2cf314b6bbdeb2e9",
       "kind": "qualified-source"
     },
     {
@@ -573,7 +573,7 @@
     },
     {
       "path": "src/rtl/timers/gba_timers.sv",
-      "sha256": "aefe366a40a76223b4aa7677763ee4453727755a85f85fe54819430c396c1ebe",
+      "sha256": "21baedf4d8b4a8c70d50f80adb133c12f61162cd674394b5ceb8ac2ee0259bee",
       "kind": "qualified-source"
     },
     {
@@ -593,7 +593,7 @@
     },
     {
       "path": "src/rtl/top/gba_cycle_scheduler.sv",
-      "sha256": "679c8afe4d564b4c2a83266bf8081e49abf097d9ee2dd5f74635452271efdad2",
+      "sha256": "fcfc0adf6b81ea7f64e07747abf6a5091b9ec44cc4f0fd5efc4a26b3125b2baa",
       "kind": "qualified-source"
     },
     {
@@ -648,7 +648,7 @@
     },
     {
       "path": "src/rtl/top/gba_system_top.sv",
-      "sha256": "f61bcb32288ee5623845ee0cab0b4500999290b7e234bf8aec8ac161fea2e718",
+      "sha256": "1de319c41c41d55923259e903e5ee2c47a3b2274687e601e1f31ac9beb61dd56",
       "kind": "qualified-source"
     },
     {
@@ -753,7 +753,7 @@
     },
     {
       "path": "src/tb/gba_playtime_overlay_tb.sv",
-      "sha256": "f36339c10591d1b4a921bb1d60bba926da347938d08af90db0e61853e53474a1",
+      "sha256": "b73a915d257de30276b416534e81879278443a95d3d22e1d46c6ebddb478a800",
       "kind": "simulation-source"
     },
     {
@@ -778,7 +778,7 @@
     },
     {
       "path": "src/tb/gba_state_dma_tb.sv",
-      "sha256": "f7bb6dbcaeb0aa54da5efd5b55d7cb096de2b7945af911a073d39e0ad43c4fa8",
+      "sha256": "aa9e3aba7c9f1cdd5a30e1ca7f9a3a3e9882eba5277f82624971548a843b0fb4",
       "kind": "simulation-source"
     },
     {
@@ -790,6 +790,106 @@
       "path": "docs/build-validation-0.2.1-receipt.json",
       "sha256": "7f8de64c0264a03dc742a91be79ac14692cae9f152997c407f63c3e6464b4761",
       "kind": "build-validation"
+    },
+    {
+      "path": "src/fpga/core/gamepak_obj_route_fit.sdc",
+      "sha256": "c21222327f40c0aa994be7760a040a899a085f490071414b9a302285dc0136f5",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/gamepak_palette_fit.sdc",
+      "sha256": "60875654450b3a724422274404d4049043e138a6ddb5eb73f726d9b586bd6bfc",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/gamepak_render_target.sdc",
+      "sha256": "133bacf906b06f93cea7e73d6d4deb266c66e5c24d403556fc899991dadd22d9",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/core/gamepak_text_map_fit.sdc",
+      "sha256": "bf7312a19fd79c51f9c58befcdc248cdd491627277355cfd3ed4a164250b6564",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/fpga/gamepak-catalog.hex",
+      "sha256": "093a22820a67f76c1b92d270b4409e604a1b1b5b01098f363607333e0596ebf5",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_catalog.sv",
+      "sha256": "9c73339da7d614bdbfd3297c673008f66fba06c80a2c65d25fa242c08f26da79",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_catalog_rom.sv",
+      "sha256": "90fadb2609ff5b8f18fca9b6aec4afc215f9f9b17e794ad33d2443304c839da1",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_detect.sv",
+      "sha256": "43ac2d3910e830ca6c8230ff65cae9f8c6bec088a3747e79e6b5a86b392fffdc",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_flash.sv",
+      "sha256": "fe7519a9dfd1bdd6a267da5e3c7b789a820f1bf091ca8d14e1d2c7211032b5c1",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_header_probe.sv",
+      "sha256": "971b83284ec81c53fab1809a08f49b4870ce5f62a8b3d757de47bf0e8f8e3220",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_native_backup.sv",
+      "sha256": "f49daaffee6ba870969348ec8f02c8914e41ffc338e319a5a5b788694943f48d",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_native_bus.sv",
+      "sha256": "d7d11c2a44e1b875ab1dd41be07c102dfde900808b81dfa28d30aa5eed8a89d0",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_profile.sv",
+      "sha256": "df14ee92b870ce4cff63ddc35f9c6a295c0b57afde03b04d1f19b6788d8bb30f",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_rom_loader.sv",
+      "sha256": "66f83c7d2052215528a160dff598ff16a18a46a5fcf924aeed8ef10f118bb953",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_rom_reader.sv",
+      "sha256": "bba1df7366d3f4c4a23e30c19a228f0136dea2ba25eedc57d72698928e21cb47",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_rom_size_probe.sv",
+      "sha256": "f8c2227facf884e8781f2f44c1dc579da286c2b04816cbb3e2f4f4031d9864fd",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_save.sv",
+      "sha256": "0f16dc7b86c057c9416c345f71fe04bd89fca257dbe39b0eaecc08fe82cc6cb0",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_save_backup.sv",
+      "sha256": "fd44eb3469f0eabed21f7852ce69f98a56345802137623581af01edd5fb85d4c",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/memory/gba_gamepak_save_import.sv",
+      "sha256": "1279b9a6f33c7df16487b20b235c54a60b2ac047995b6d8e28ce88daa454f4fe",
+      "kind": "qualified-source"
+    },
+    {
+      "path": "src/rtl/overlay/gba_gamepak_stats_file.sv",
+      "sha256": "246ec33985a5663f1803ec77393c232051c82c8110f3778d26e0f8beb84da6c1",
+      "kind": "qualified-source"
     }
   ],
   "hardware_acceptance": {
