@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "historical_fit": "playtime-units-fit-20261106-17",
-  "scope": "18 preserved physical stages plus CPU, retained-ROM and validator timing cones, the Soft Colors setting crossing, and a reset clock-domain crossing audit; original limits unchanged",
+  "historical_fit": "cart-0.2.1-76 (ff-hold-20261122-s7)",
+  "scope": "18 preserved physical stages plus CPU, retained-ROM and validator timing cones, the Soft Colors setting crossing, a reset clock-domain crossing audit and four Play Cartridge pin and save-bus audits; original limits unchanged",
   "audits": [
     {
       "name": "diagnosis",
@@ -104,6 +104,29 @@
       "name": "reset-crossing",
       "script": "check-reset-crossing-timing.tcl",
       "marker": "PASS: no reset crosses a clock domain outside a synchronizer"
+    },
+    {
+      "name": "gamepak-header",
+      "script": "check-gamepak-header-timing.tcl",
+      "marker": "PASS: Game Pak read and direction paths"
+    },
+    {
+      "name": "gamepak-boot-address",
+      "script": "check-gamepak-boot-address-timing.tcl",
+      "marker": "PASS: Game Pak boot address timing",
+      "arguments": [
+        "23"
+      ]
+    },
+    {
+      "name": "gamepak-save",
+      "script": "check-gamepak-save-timing.tcl",
+      "marker": "PASS: Game Pak Flash I/O timing"
+    },
+    {
+      "name": "gamepak-eeprom",
+      "script": "check-gamepak-eeprom-timing.tcl",
+      "marker": "PASS: Game Pak EEPROM I/O timing"
     }
   ],
   "files": [
@@ -198,6 +221,22 @@
     {
       "path": "scripts/timing/check-reset-crossing-timing.tcl",
       "sha256": "38adcdb1202857f156d5cffef59c7f67795816d8001d63e2f48e282ad9f1757e"
+    },
+    {
+      "path": "scripts/timing/check-gamepak-header-timing.tcl",
+      "sha256": "a17b4ad08eba9cea48aea4d49c9a15b8067204760efcad47cde9c0e6b7dd9ef6"
+    },
+    {
+      "path": "scripts/timing/check-gamepak-boot-address-timing.tcl",
+      "sha256": "a7e0f8572896df14bbba7c9774573bf365387e3fe9cbbe97f2eff52f0f21aec2"
+    },
+    {
+      "path": "scripts/timing/check-gamepak-save-timing.tcl",
+      "sha256": "2dc6216e64aa9acd73db72f2506bb6e0b43f4f2b84fa77094290660b12fd3349"
+    },
+    {
+      "path": "scripts/timing/check-gamepak-eeprom-timing.tcl",
+      "sha256": "2fa9ace0d1f76fc3661ab66cb772dc79278323611afbf8e2c6cf031d52945364"
     }
   ],
   "timing_coverage": [
