@@ -7,6 +7,9 @@ module gba_serial #(
     input wire clk,reset,cycle_enable,stopped,
 `ifdef GBK_SAVESTATE
     input wire state_prepare,state_hold,state_write,
+`ifdef GBK_STATE_SERIAL
+    input wire state_shift,state_restore,
+`endif
     input wire [3:0] state_addr,
     input wire [31:0] state_wdata,
     output wire state_valid,
@@ -51,13 +54,23 @@ module gba_serial #(
         state_rdata=0;
         if(state_valid)case(state_addr)
             0:state_rdata={send_data,siocnt};1:state_rdata={joycnt,rcnt};
+`ifdef GBK_STATE_SERIAL
+            2:state_rdata={31'd0,data32[0]};3:state_rdata={31'd0,multi23[0]};
+            4:state_rdata={31'd0,joy_recv[0]};5:state_rdata={31'd0,joy_trans[0]};
+            6:state_rdata={31'd0,busy};
+            7:state_rdata={31'd0,transmit[0]};8:state_rdata={31'd0,receive[0]};
+`else
             2:state_rdata=data32;3:state_rdata=multi23;4:state_rdata=joy_recv;5:state_rdata=joy_trans;
             6:state_rdata={8'd0,irq,joystat,half_count,remaining,normal_hold,so_bit,clock_level,busy};
             7:state_rdata=transmit;8:state_rdata=receive;
+`endif
             9:state_rdata={20'd0,pins_previous,pins_sync,pins_meta};
             default:state_rdata=0;
         endcase
     end
+`ifdef GBK_STATE_SERIAL
+    wire state_in=state_restore ? state_wdata[0] : state_rdata[0];
+`endif
 `endif
     wire [1:0] mode=siocnt[13:12];
     wire cable_tick;
@@ -192,14 +205,26 @@ module gba_serial #(
                     send_data<=state_wdata[31:16];
                 end
                 1:begin rcnt<=state_wdata[15:0]&16'hc1ff;joycnt<=state_wdata[31:16]&16'h0047;end
+`ifndef GBK_STATE_SERIAL
                 2:data32<=state_wdata;3:multi23<=state_wdata;4:joy_recv<=state_wdata;5:joy_trans<=state_wdata;
                 6:begin busy<=state_wdata[0];clock_level<=state_wdata[1];so_bit<=state_wdata[2];
                     normal_hold<=state_wdata[5:3];remaining<=state_wdata[11:6];half_count<=state_wdata[16:12];
                     joystat<=state_wdata[22:17];irq<=state_wdata[23];end
                 7:transmit<=state_wdata;8:receive<=state_wdata;
+`endif
                 9:begin pins_meta<=state_wdata[3:0];pins_sync<=state_wdata[7:4];pins_previous<=state_wdata[11:8];end
                 default:begin end
             endcase
+`ifdef GBK_STATE_SERIAL
+            if(state_shift && state_valid)case(state_addr)
+                2:data32<={state_in,data32[31:1]};3:multi23<={state_in,multi23[31:1]};
+                4:joy_recv<={state_in,joy_recv[31:1]};5:joy_trans<={state_in,joy_trans[31:1]};
+                6:{irq,joystat,half_count,remaining,normal_hold,so_bit,clock_level,busy}<=
+                    {state_in,irq,joystat,half_count,remaining,normal_hold,so_bit,clock_level};
+                7:transmit<={state_in,transmit[31:1]};8:receive<={state_in,receive[31:1]};
+                default:begin end
+            endcase
+`endif
 `endif
         end else begin
             for(integer pin=0;pin<4;pin=pin+1)pins_meta[pin]<=

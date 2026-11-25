@@ -235,6 +235,884 @@ assign bridge_endian_little = 0;
 
 // cart is unused, so set all level translators accordingly
 // directions are 0:IN, 1:OUT
+`ifdef GBK_GAMEPAK_HEADER_TRIAL
+wire cart_trial_selected,cart_trial_power;
+wire [7:0] cart_trial_adapter;
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+wire cart_trial_gba;
+wire cart_trial_native=cart_trial_power && cart_trial_gba && cart_trial_adapter==0;
+`else
+wire cart_trial_native=cart_trial_power && cart_trial_adapter==0;
+`endif
+wire cart_trial_enable=cart_trial_selected && cart_trial_native && reset_n && !memory_startup_reset;
+`ifndef GBK_GAMEPAK_NATIVE_BUS
+wire [23:0] cart_rom_address;
+wire cart_trial_address_drive,cart_trial_ad_drive;
+wire cart_trial_cs_n,cart_trial_rd_n,cart_trial_wr_n,cart_trial_cs2_n;
+`endif
+wire cart_trial_req,cart_trial_ready,cart_trial_valid,cart_trial_reply_ready;
+wire [22:0] cart_trial_word;
+wire [31:0] cart_trial_data;
+wire cart_trial_rejected=cart_trial_selected && !cart_trial_native;
+wire cart_trial_event_ready;
+`ifdef GBK_GAMEPAK_BOOT_TRACE
+wire cart_trace_valid;
+wire [31:0] cart_trace_data;
+`endif
+assign gba_log_ready=cart_trial_event_ready && !cart_trial_selected;
+reg cart_trial_reported=0;
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+`ifdef GBK_GAMEPAK_PROFILE
+wire [23:0] cart_profile_words;
+wire [17:0] cart_profile_save_bytes;
+wire [31:0] cart_game_code,cart_header_code,cart_profile_crc;
+wire cart_profile_valid,cart_profile_sram,cart_copy_start,cart_header_code_valid;
+wire cart_profile_eeprom;
+`ifdef GBK_GAMEPAK_PROFILE_STATS_DIRECT
+wire cart_profile_path_read;
+wire [3:0] cart_profile_path_index;
+wire [31:0] cart_profile_path_word;
+`endif
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+wire cart_eeprom_selected=cart_profile_eeprom;
+`else
+wire cart_eeprom_selected=1'b0;
+`endif
+wire [31:0] cart_boot_bytes={6'd0,cart_profile_words,2'b0};
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+wire cart_catalog_pending,cart_catalog_active,cart_catalog_read,cart_catalog_result;
+wire cart_catalog_word,cart_catalog_crc_idle,cart_catalog_crc_error;
+wire [31:0] cart_catalog_crc;
+wire [23:0] cart_catalog_alternate;
+wire [2:0] cart_catalog_save;
+wire [5:0] cart_catalog_hardware;
+wire cart_catalog_retry=cart_boot_drained && cart_catalog_result &&
+    !cart_profile_valid && cart_catalog_alternate!=0 && !cart_boot_failed;
+wire cart_profile_usable=cart_profile_valid;
+wire cart_physical_save=cart_catalog_save==2 || cart_catalog_save==3 ||
+`ifdef GBK_GAMEPAK_FLASH128
+    cart_catalog_save==4 ||
+`endif
+    cart_catalog_save==5 || cart_catalog_save==6;
+`ifdef GBK_GAMEPAK_FLASH128
+wire cart_save_large=cart_catalog_save==4;
+`else
+wire cart_save_large=1'b0;
+`endif
+assign cart_profile_crc=pstate_rom_crc;
+assign cart_profile_sram=cart_catalog_save==2;
+assign cart_profile_eeprom=cart_catalog_save==5 || cart_catalog_save==6;
+assign cart_profile_save_bytes=cart_catalog_save==5 ? 18'd512 : cart_catalog_save==6 ? 18'd8192 :
+    cart_catalog_save==2 ? 18'd32768 : cart_catalog_save==3 ? 18'd65536 :
+    cart_catalog_save==4 ? 18'd131072 : 18'd0;
+`ifdef GBK_GAMEPAK_DETECT
+// Evaluate the cartridge itself: header, probed size and save library string.
+wire [23:0] cart_detected_words;
+wire gba_save_flash512_signature,gba_save_flash1m_signature;
+assign {cart_catalog_active,cart_catalog_read,cart_catalog_word}=0;
+gba_gamepak_detect cart_profile(
+    .clk(clk_74a),.reset(!cart_trial_enable || cart_boot_start),
+    .header_valid(cart_header_code_valid),.header_code(cart_header_code),
+    .validate(cart_boot_drained && pstate_identity_ready),.detected_words(cart_detected_words),
+    .signature_sram(gba_save_sram),.signature_eeprom(gba_save_eeprom),
+    .signature_flash512(gba_save_flash512_signature),.signature_flash1m(gba_save_flash1m_signature),
+    .size_pending(cart_catalog_pending),.game_code(cart_game_code),.rom_words(cart_profile_words),
+    .result_valid(cart_catalog_result),.matched(cart_profile_valid),.alternate_words(cart_catalog_alternate),
+    .save_kind(cart_catalog_save),.hardware(cart_catalog_hardware));
+`elsif GBK_GAMEPAK_CATALOG_ROM
+assign {cart_catalog_active,cart_catalog_read,cart_catalog_word}=0;
+gba_gamepak_catalog_rom #(.ROWS(`GBK_GAMEPAK_CATALOG_ROWS)) cart_profile(
+    .clk(clk_74a),.reset(!cart_trial_enable || cart_boot_start),
+    .header_valid(cart_header_code_valid),.header_code(cart_header_code),
+    .validate(cart_boot_drained && pstate_identity_ready),.advance(cart_catalog_retry),.rom_crc(pstate_rom_crc),
+    .size_pending(cart_catalog_pending),.game_code(cart_game_code),.rom_words(cart_profile_words),
+    .result_valid(cart_catalog_result),.matched(cart_profile_valid),.alternate_words(cart_catalog_alternate),
+    .save_kind(cart_catalog_save),.hardware(cart_catalog_hardware));
+`else
+gba_gamepak_catalog #(.ASSET_BYTES(`GBK_GAMEPAK_CATALOG_BYTES),
+    .ASSET_CRC(`GBK_GAMEPAK_CATALOG_CRC)) cart_profile(
+    .clk(clk_74a),.reset(!cart_trial_enable || cart_boot_start),
+    .header_valid(cart_header_code_valid),.header_code(cart_header_code),
+    .validate(cart_boot_drained && pstate_identity_ready),.advance(cart_catalog_retry),
+    .rom_crc(pstate_rom_crc),.timeout_tick(cart_apf_timeout_tick),
+    .bridge_wr(bridge_wr),.bridge_addr(bridge_addr),.bridge_data(gba_load_wdata),
+    .command_done(target_dataslot_done),.command_error(target_dataslot_err),
+    .crc_idle(cart_catalog_crc_idle),.crc_error(cart_catalog_crc_error),.stream_crc(cart_catalog_crc),
+    .crc_write(cart_catalog_word),
+    .command_read(cart_catalog_read),.active(cart_catalog_active),.size_pending(cart_catalog_pending),
+    .game_code(cart_game_code),.rom_words(cart_profile_words),.result_valid(cart_catalog_result),
+    .matched(cart_profile_valid),.alternate_words(cart_catalog_alternate),
+    .save_kind(cart_catalog_save),.hardware(cart_catalog_hardware),.failed());
+`endif
+`else
+wire cart_profile_usable=cart_profile_valid &&
+    (cart_profile_eeprom ? (cart_eeprom_selected && GBA_EEPROM &&
+        (cart_profile_save_bytes==512 || cart_profile_save_bytes==8192)) :
+     cart_profile_sram ? cart_profile_save_bytes==32768 : cart_profile_save_bytes==65536) &&
+    gba_save_eeprom==cart_profile_eeprom && gba_save_sram==cart_profile_sram;
+gba_gamepak_profile
+`ifdef GBK_GAMEPAK_PROFILE_STATS_DIRECT
+    #(.INCLUDE_STATS_PATH(1))
+`endif
+cart_profile(.clk(clk_74a),.start(cart_boot_start),.header_code_valid(cart_header_code_valid),
+    .header_game_code(cart_header_code),.rom_crc(pstate_rom_crc),.game_code(cart_game_code),.profile_crc(cart_profile_crc),
+    .rom_words(cart_profile_words),.save_profile_valid(cart_profile_valid),.save_sram_32k(cart_profile_sram),
+    .save_eeprom(cart_profile_eeprom),.save_bytes(cart_profile_save_bytes),
+`ifdef GBK_GAMEPAK_PROFILE_STATS_DIRECT
+    .stats_path_read(cart_profile_path_read),.stats_path_index(cart_profile_path_index),.stats_path_word(cart_profile_path_word)
+`else
+    .stats_path_read(1'b0),.stats_path_index(4'd0),.stats_path_word()
+`endif
+    );
+`endif
+`ifdef GBK_GAMEPAK_SIZE_PROBE
+wire [23:0] cart_probed_words;
+wire [1:0] cart_size_evidence;
+`endif
+`else
+localparam [31:0] CART_BOOT_BYTES=32'h00800000;
+localparam [31:0] CART_BOOT_CRC=32'he1fb68e8;
+wire [31:0] cart_boot_bytes=CART_BOOT_BYTES;
+wire cart_copy_start=cart_boot_start;
+`endif
+wire cart_boot_valid,cart_boot_load_ready,cart_boot_load_idle,cart_boot_done,cart_boot_error;
+wire [22:0] cart_boot_word;
+wire [31:0] cart_boot_data;
+reg [19:0] cart_trial_power_wait=0;
+reg cart_boot_started=0,cart_boot_drained=0,cart_boot_passed=0,cart_boot_failed=0;
+reg [5:0] cart_crc_wait=0;
+wire cart_boot_start=cart_trial_enable && (&cart_trial_power_wait) && !cart_boot_started;
+wire cart_boot_write=cart_boot_valid && cart_boot_load_ready;
+wire cart_boot_release_video;
+`ifdef GBK_GAMEPAK_SAVE
+wire cart_save_busy,cart_save_import_done,cart_save_import_ok,cart_save_lock,cart_save_reset_block;
+wire cart_stats_done,cart_stats_start;
+wire cart_apf_timeout_tick=cart_boot_started && (&cart_trial_power_wait);
+`ifdef GBK_GAMEPAK_STATS_FILE
+`ifndef GBK_GAMEPAK_PROFILE
+reg [31:0] cart_game_code;
+always @(posedge clk_74a)if(cart_boot_write && cart_boot_word==23'h2b)
+    cart_game_code<=cart_boot_data;
+`endif
+wire cart_stats_active,cart_stats_open,cart_stats_read,cart_stats_accept,cart_stats_attached;
+wire [3:0] cart_stats_result;
+wire [31:0] cart_stats_file_rdata;
+gba_gamepak_stats_file
+`ifdef GBK_GAMEPAK_PROFILE_STATS_DIRECT
+    #(.PRESELECTED_PROFILE(1))
+`endif
+cart_stats_file(
+    .clk(clk_74a),.enable(cart_trial_selected && !memory_startup_reset),
+    .restart(cart_boot_start),.start(cart_stats_start),.timeout_tick(cart_apf_timeout_tick),
+    .game_code(cart_game_code),
+`ifdef GBK_GAMEPAK_PROFILE
+    .rom_crc(cart_profile_crc),
+`else
+    .rom_crc(pstate_rom_crc),
+`endif
+    .bridge_rd(bridge_rd),.bridge_addr(bridge_addr),
+`ifdef GBK_GAMEPAK_PROFILE_STATS_DIRECT
+    .profile_path_read(cart_profile_path_read),.profile_path_index(cart_profile_path_index),
+    .profile_path_word(cart_profile_path_word),
+`else
+    .profile_path_read(),.profile_path_index(),.profile_path_word(32'd0),
+`endif
+    .command_done(target_dataslot_done),.command_error(target_dataslot_err),
+    .command_open(cart_stats_open),.command_read(cart_stats_read),.active(cart_stats_active),
+    .accept_data(cart_stats_accept),.done(cart_stats_done),.attached(cart_stats_attached),.result(cart_stats_result),
+    .bridge_rdata(cart_stats_file_rdata));
+`endif
+wire cart_save_rd,cart_save_wr;
+wire [14:0] cart_save_word;
+wire [31:0] cart_save_wdata;
+wire [2:0] cart_save_result;
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+wire guest_save_written,cart_save_pending,cart_save_restored,cart_save_flush_block;
+// A Memory restore that completes successfully resumes automatic writes.
+reg cart_restore_ok_seen=0;
+wire cart_restore_done;
+`endif
+reg [31:0] cart_save_status_rdata=0;
+// The APF bridge latches the response before pulsing bridge_rd.
+always @(posedge clk_74a)
+    cart_save_status_rdata<={
+`ifdef GBK_GAMEPAK_STATS_FILE
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+        20'd0,cart_save_pending,cart_save_restored,cart_stats_done,cart_stats_result,
+`else
+        22'd0,cart_stats_done,cart_stats_result,
+`endif
+`else
+        27'd0,
+`endif
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+        cart_native_write_allowed,cart_native_backup_busy,
+        cart_native_backup_failed ? 3'd5 : cart_native_write_allowed ? 3'd1 : 3'd0};
+`else
+        cart_save_import_ok,cart_save_busy,cart_save_result};
+`endif
+reg cart_save_boot_started=0;
+wire cart_save_import_start=cart_boot_passed && !cart_save_boot_started && gba_save_boot_ready;
+always @(posedge clk_74a)begin
+    if(!cart_trial_enable)cart_save_boot_started<=0;
+    else if(cart_save_import_start)cart_save_boot_started<=1;
+end
+assign cart_stats_start=
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+`ifndef GBK_GAMEPAK_NATIVE_PREFLIGHT
+    1'b0;
+`else
+    cart_save_import_start;
+`endif
+`else
+    cart_save_import_start;
+`endif
+// An import error keeps the guest in reset so it cannot play against a
+// partially initialized save. Reset Enter remains available after failure.
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+wire cart_native_save_supported=cart_catalog_save==2 || cart_catalog_save==3;
+wire cart_release_game=cart_boot_passed && cart_stats_done &&
+    (!cart_native_save_supported || cart_native_write_allowed);
+`else
+wire cart_release_game=cart_boot_passed;
+`endif
+`else
+wire cart_release_game=cart_boot_passed && (cart_save_import_ok
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+    || (cart_save_boot_started && !cart_physical_save)
+`endif
+    ) && cart_stats_done
+`ifdef GBK_GAMEPAK_STATS_FILE
+    && gba_rtc_boot_ready
+`endif
+    ;
+`endif
+`else
+wire cart_release_game=cart_boot_passed;
+`endif
+// Three-flop crossing into the video clock (same latency as synch_3). The
+// release gate includes the RTC boot gate, a reset source, so the first stage
+// keeps the *_sync[0] naming the reset-crossing audit recognizes.
+(* preserve, dont_merge, altera_attribute="-name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *)
+reg [2:0] cart_boot_release_sync=0;
+always @(posedge clk_core_12288)cart_boot_release_sync<={cart_boot_release_sync[1:0],cart_release_game};
+assign cart_boot_release_video=cart_boot_release_sync[2];
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+wire cart_boot_frame_start,cart_boot_release_ack;
+reg cart_boot_frame_ready=0;
+always @(posedge clk_core_12288) begin
+    // Bridge reset_n is a 74 MHz register; clear through its video-clock
+    // synchronizer so no raw reset crosses into this domain.
+    if(core_video_reset)cart_boot_frame_ready<=0;
+    else if(cart_boot_release_video && cart_boot_frame_start)cart_boot_frame_ready<=1;
+end
+synch_3 cart_boot_release_ack_sync(.i(cart_boot_frame_ready),.o(cart_boot_release_ack),
+    .clk(clk_74a),.rise(),.fall());
+`else
+wire cart_boot_release_ack=cart_release_game;
+`endif
+`ifdef GBK_GAMEPAK_LOADING_SCREEN
+// Loading screen progress: one step per 1/256 of the detected size, counted
+// on the copy's word handshake. The counter only increments by one, so its
+// Gray code crosses into the video clock without a torn value.
+reg [14:0] cart_progress_mask=0;
+reg [7:0] cart_progress=0,cart_progress_gray=0;
+wire [23:0] cart_progress_span=cart_detected_words-24'd1;
+always @(posedge clk_74a)begin
+    cart_progress_mask<=cart_progress_span[22:8];
+    if(!cart_trial_enable || cart_copy_start)cart_progress<=0;
+    else if(cart_boot_write && &(cart_boot_word[14:0] | ~cart_progress_mask) && !(&cart_progress))
+        cart_progress<=cart_progress+1'b1;
+    cart_progress_gray<=cart_progress^(cart_progress>>1);
+end
+wire [7:0] cart_progress_gray_video;
+synch_3 #(.WIDTH(8)) cart_progress_sync(.i(cart_progress_gray),.o(cart_progress_gray_video),
+    .clk(clk_core_12288),.rise(),.fall());
+wire [7:0] cart_progress_video;
+genvar cart_progress_bit;
+assign cart_progress_video[7]=cart_progress_gray_video[7];
+generate for(cart_progress_bit=0;cart_progress_bit<7;cart_progress_bit=cart_progress_bit+1)begin: cart_progress_degray
+    assign cart_progress_video[cart_progress_bit]=cart_progress_video[cart_progress_bit+1]^
+        cart_progress_gray_video[cart_progress_bit];
+end endgenerate
+wire cart_load_failed_video;
+synch_3 cart_load_failed_sync(.i(cart_boot_failed || cart_trial_rejected),.o(cart_load_failed_video),
+    .clk(clk_core_12288),.rise(),.fall());
+// Shown from the first scanout frame until the guest is released.
+wire cart_loading_video=cart_trial_selected && !cart_boot_frame_ready;
+`endif
+always @(posedge clk_74a) begin
+    if(!cart_trial_enable)begin
+        cart_trial_power_wait<=0;
+        cart_boot_started<=0;cart_boot_drained<=0;cart_boot_passed<=0;cart_boot_failed<=0;
+        cart_crc_wait<=0;
+    end else begin
+        if(!(&cart_trial_power_wait)
+`ifdef GBK_GAMEPAK_STATS_FILE
+            || cart_boot_started
+`elsif GBK_GAMEPAK_PROFILE
+            || cart_boot_started
+`endif
+        )cart_trial_power_wait<=cart_trial_power_wait+1'b1;
+        if(cart_boot_start)cart_boot_started<=1;
+        if(cart_boot_done)cart_boot_drained<=1;
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+`ifndef GBK_GAMEPAK_NATIVE_PREFLIGHT
+        if(cart_boot_done)cart_boot_passed<=1;
+`endif
+`endif
+        if(cart_boot_error)cart_boot_failed<=1;
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+        if(cart_catalog_retry)begin cart_boot_drained<=0;cart_crc_wait<=0;end
+`endif
+        // Allow the existing serial CRC engine to finish the last word.
+        if(cart_boot_drained && !cart_boot_passed && !cart_boot_failed)begin
+            if(pstate_identity_ready)begin
+`ifdef GBK_GAMEPAK_PROFILE
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+                if(cart_catalog_result && !cart_catalog_retry)begin
+                    cart_boot_passed<=cart_profile_usable;
+                    cart_boot_failed<=!cart_profile_usable;
+                end
+`else
+                cart_boot_passed<=cart_profile_usable;
+                cart_boot_failed<=!cart_profile_usable;
+`endif
+`else
+                cart_boot_passed<=pstate_rom_crc==CART_BOOT_CRC;
+                cart_boot_failed<=pstate_rom_crc!=CART_BOOT_CRC;
+`endif
+            end
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+            else if(!cart_catalog_active)
+`else
+            else
+`endif
+            if(&cart_crc_wait)cart_boot_failed<=1;
+            else cart_crc_wait<=cart_crc_wait+1'b1;
+        end
+    end
+end
+wire cart_trial_event_valid=reset_n && !cart_trial_reported &&
+    (cart_boot_release_ack || cart_boot_failed || cart_trial_rejected
+`ifdef GBK_GAMEPAK_SAVE
+    || (cart_save_import_done && !cart_save_import_ok)
+`endif
+    );
+wire [31:0] cart_trial_event_data=
+`ifdef GBK_GAMEPAK_SIZE_PROBE
+    (cart_boot_failed && cart_size_evidence!=0) ? {16'h4350,8'd0,cart_probed_words[23:18],cart_size_evidence} :
+`endif
+    {24'h434152,
+`ifdef GBK_GAMEPAK_STATS_FILE
+        cart_stats_result,cart_stats_done,
+`else
+        5'd0,
+`endif
+        1'b1,cart_trial_rejected,cart_boot_release_ack};
+gba_gamepak_rom_loader #(
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+`ifndef GBK_GAMEPAK_NATIVE_PREFLIGHT
+    // The shared port reads header words 0x28 through 0x2f at boot.
+    .HEADER_ONLY(1),.COPY_ADDRESS_BITS(6)
+`else
+    .RESOLVE_PROFILE(1)
+`endif
+`else
+`ifdef GBK_GAMEPAK_PROFILE
+    .RESOLVE_PROFILE(1)
+`ifdef GBK_GAMEPAK_DETECT
+    ,.PROBE_UNKNOWN_SIZE(1),.DETECT_SIZE(1)
+`endif
+`ifdef GBK_GAMEPAK_SIZE_PROBE
+    ,.PROBE_UNKNOWN_SIZE(1)
+`elsif GBK_GAMEPAK_BOOT_LEAN
+`ifndef GBK_GAMEPAK_RETAIL_CATALOG
+    ,.VERIFY_HEADER_CHECKSUM(0)
+`endif
+`endif
+`else
+    .EXPECTED_GAME_CODE(32'h45534741)
+`ifdef GBK_GAMEPAK_BOOT_LEAN
+    ,.VERIFY_HEADER_CHECKSUM(0)
+`endif
+`endif
+`endif
+) cart_boot_loader(
+    .clk(clk_74a),.reset(!reset_n),.enable(cart_trial_enable),.start(cart_boot_start
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+        || cart_catalog_retry
+`endif
+        ),
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+    .profile_pending(cart_catalog_pending),
+`else
+    .profile_pending(1'b0),
+`endif
+`ifdef GBK_GAMEPAK_DETECT
+    .image_words(24'd0),.detected_words(cart_detected_words),
+`else
+    .image_words(cart_boot_bytes[25:2]),
+`endif
+    .busy(),.done(cart_boot_done),.error(cart_boot_error),
+`ifdef GBK_GAMEPAK_PROFILE
+    .header_game_code(cart_header_code),.header_code_valid(cart_header_code_valid),.copy_start(cart_copy_start),
+`ifdef GBK_GAMEPAK_SIZE_PROBE
+    .probed_words(cart_probed_words),.probe_evidence(cart_size_evidence),
+`endif
+`endif
+    .reader_valid(cart_trial_req),.reader_word(cart_trial_word),.reader_ready(cart_trial_ready),
+    .reader_reply(cart_trial_valid),.reader_data(cart_trial_data),.reader_reply_ready(cart_trial_reply_ready),
+    .load_valid(cart_boot_valid),.load_word(cart_boot_word),.load_data(cart_boot_data),
+    .load_ready(cart_boot_load_ready),.load_idle(cart_boot_load_idle));
+`else
+`ifdef GBK_GAMEPAK_CODE_ONLY
+reg [19:0] cart_trial_power_wait=0;
+always @(posedge clk_74a) begin
+    if(!cart_trial_enable)cart_trial_power_wait<=0;
+    else if(!(&cart_trial_power_wait))cart_trial_power_wait<=cart_trial_power_wait+1'b1;
+end
+assign cart_trial_req=cart_trial_enable && (&cart_trial_power_wait) && !cart_trial_reported;
+assign cart_trial_word=23'h2b; // Game code at byte offset AC.
+assign cart_trial_reply_ready=cart_trial_event_ready && !cart_trial_reported;
+wire cart_trial_event_valid=reset_n && !cart_trial_reported && (cart_trial_valid || cart_trial_rejected);
+wire [31:0] cart_trial_event_data=cart_trial_rejected ? 32'h43415202 : cart_trial_data;
+`else
+wire cart_trial_passed,cart_trial_failed;
+wire cart_trial_event_valid=reset_n && !cart_trial_reported &&
+    (cart_trial_passed || cart_trial_failed || cart_trial_rejected);
+wire [31:0] cart_trial_event_data={24'h434152,6'd0,cart_trial_rejected,cart_trial_passed};
+`endif
+`endif
+always @(posedge clk_74a) begin
+    if(!reset_n)cart_trial_reported<=0;
+    else if(cart_trial_event_valid && cart_trial_event_ready)cart_trial_reported<=1;
+end
+`ifndef GBK_GAMEPAK_NATIVE_BUS
+gba_gamepak_rom_reader
+`ifdef GBK_GAMEPAK_BOOT_LEAN
+    #(.LATCH_WORD_ADDRESS(0))
+`endif
+cart_trial_reader(
+    .clk(clk_74a),.reset(!reset_n),.enable(cart_trial_enable),
+    .request_valid(cart_trial_req),.request_word(cart_trial_word),.request_ready(cart_trial_ready),
+    .response_valid(cart_trial_valid),.response_ready(cart_trial_reply_ready),.response_data(cart_trial_data),
+    .cart_halfword_address(cart_rom_address),.cart_address_drive(cart_trial_address_drive),
+    .cart_ad_drive(cart_trial_ad_drive),.cart_ad_in({cart_tran_bank2,cart_tran_bank3}),
+    .cart_cs_n(cart_trial_cs_n),.cart_rd_n(cart_trial_rd_n),
+    .cart_wr_n(cart_trial_wr_n),.cart_cs2_n(cart_trial_cs2_n));
+`endif
+`ifndef GBK_GAMEPAK_BOOT_TRIAL
+`ifndef GBK_GAMEPAK_CODE_ONLY
+gba_gamepak_header_probe cart_trial_probe(
+    .clk(clk_74a),.enable(cart_trial_enable),
+    .request_valid(cart_trial_req),.request_word(cart_trial_word),.request_ready(cart_trial_ready),
+    .response_valid(cart_trial_valid),.response_data(cart_trial_data),.response_ready(cart_trial_reply_ready),
+    .passed(cart_trial_passed),.failed(cart_trial_failed));
+`endif
+`endif
+`ifdef GBK_GAMEPAK_SAVE
+wire cart_save_backup_request,cart_backup_ready,cart_backup_error,cart_backup_active,cart_backup_read;
+wire cart_backup_open,cart_backup_write,cart_backup_load;
+wire [13:0] cart_backup_word;
+wire [31:0] cart_backup_rdata,cart_backup_bridge_rdata,cart_backup_transfer;
+`ifdef GBK_GAMEPAK_PROFILE
+localparam CART_LINEAR_SAVE=1;
+wire [31:0] cart_backup_code=cart_game_code;
+wire cart_save_linear=cart_profile_sram;
+`else
+localparam CART_LINEAR_SAVE=0;
+wire [31:0] cart_backup_code=32'h45534741;
+wire cart_save_linear=1'b0;
+`endif
+wire [31:0] cart_backup_length,cart_backup_offset;
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+wire cart_save_media=1'b0;
+`else
+wire cart_save_media=cart_trial_enable && cart_boot_passed
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+    && cart_physical_save
+`endif
+    ;
+`endif
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+wire cart_eeprom_owner=cart_boot_passed && cart_eeprom_selected;
+wire cart_small_eeprom=cart_profile_save_bytes==512;
+`else
+wire cart_eeprom_owner=1'b0;
+wire cart_small_eeprom=1'b0;
+`endif
+`ifdef GBK_GAMEPAK_FLASH64_WRITEBACK
+localparam CART_LINEAR_WRITEBACK=0;
+`else
+localparam CART_LINEAR_WRITEBACK=CART_LINEAR_SAVE;
+`endif
+wire cart_use_boot_import=cart_eeprom_owner || (!CART_LINEAR_WRITEBACK && cart_save_linear);
+wire [23:0] cart_import_pins,cart_save_pins;
+wire cart_import_high,cart_import_ad,cart_import_cs1,cart_import_cs2,cart_import_rd,cart_import_wr;
+wire cart_save_high,cart_save_ad,cart_save_cs1,cart_save_cs2,cart_save_rd_n,cart_save_wr_n;
+wire cart_import_busy,cart_import_done,cart_import_ok,cart_import_write;
+wire [13:0] cart_import_word;
+wire [31:0] cart_import_wdata;
+wire [2:0] cart_import_result=cart_import_done ? (cart_import_ok ? 3'd1 : 3'd3) : 3'd0;
+wire cart_startup_import=cart_save_media
+`ifndef GBK_GAMEPAK_IMPORT_ONLY
+    && cart_use_boot_import
+`endif
+    ;
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+// EEPROM writeback. The commit uses the measured chip width; it is enabled
+// only once the game has used that same width and no other, because a write
+// at the wrong width would place data in the wrong bits of the chip.
+wire cart_eeprom_rd,cart_eeprom_lock,cart_eeprom_reset_block;
+wire cart_eeprom_backup_request,cart_eeprom_backup_filled;
+wire [2:0] cart_eeprom_result;
+wire [31:0] cart_eeprom_backup_rdata;
+wire cart_commit_start,cart_save_locked,cart_eeprom_narrow;
+wire [1:0] gba_eeprom_game_width,cart_eeprom_game_width;
+wire gba_eeprom_commit;
+wire cart_eeprom_commit_seen,cart_eeprom_commit_now;
+reg cart_eeprom_commit_last=0;
+synch_3 #(.WIDTH(2)) eeprom_game_width_sync(gba_eeprom_game_width,cart_eeprom_game_width,clk_74a);
+synch_3 eeprom_commit_sync(gba_eeprom_commit,cart_eeprom_commit_seen,clk_74a);
+always @(posedge clk_74a)cart_eeprom_commit_last<=cart_eeprom_commit_seen;
+assign cart_eeprom_commit_now=cart_eeprom_commit_seen!=cart_eeprom_commit_last;
+wire cart_eeprom_width_ok=cart_eeprom_game_width==(cart_eeprom_narrow ? 2'b10 : 2'b01);
+// The import also vouches for the read (confirmed and not all-FF) and
+// withdraws writeback after any failed program.
+wire cart_eeprom_allowed;
+`ifdef GBK_GAMEPAK_UNSAVED_FALLBACK
+// Every EEPROM session commits once its import has finished; the import
+// writes the cart only when trusted at the game's width, and otherwise saves
+// the session to CODE-unsaved.sav.
+wire cart_eeprom_writeback=cart_save_media && cart_eeprom_owner && cart_import_done;
+`else
+wire cart_eeprom_writeback=cart_save_media && cart_eeprom_owner && cart_import_ok && cart_eeprom_width_ok &&
+    cart_eeprom_allowed;
+`endif
+wire cart_eeprom_backup_fallback;
+`endif
+gba_gamepak_save_import #(
+`ifndef GBK_GAMEPAK_IMPORT_ONLY
+    // The writeback controller imports byte-wide saves itself.
+    .EEPROM_ONLY(CART_LINEAR_WRITEBACK)
+`endif
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    ,.EEPROM_WRITEBACK(1)
+`endif
+`ifdef GBK_GAMEPAK_UNSAVED_FALLBACK
+    ,.FALLBACK_SAVE(1)
+`endif
+    ) gamepak_import(
+    .clk(clk_74a),.enable(cart_startup_import),.start(cart_save_import_start),
+    .eeprom(cart_eeprom_owner),.small_capacity(cart_eeprom_owner ? cart_small_eeprom : cart_save_linear),
+    .parallel_in(cart_tran_bank1),.serial_in(cart_tran_bank3[0]),
+    .busy(cart_import_busy),.done(cart_import_done),.ok(cart_import_ok),
+    .pin_address_data(cart_import_pins),.high_drive(cart_import_high),.ad_drive(cart_import_ad),
+    .cs1_n(cart_import_cs1),.cs2_n(cart_import_cs2),.rd_n(cart_import_rd),.wr_n(cart_import_wr),
+    .raw_write(cart_import_write),.raw_address(cart_import_word),.raw_wdata(cart_import_wdata),
+    .raw_idle(pstate_save_idle),.raw_done(pstate_save_done),.raw_error(gba_save_fault)
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    ,.eeprom_narrow(cart_eeprom_narrow),.commit_start(cart_commit_start && cart_eeprom_writeback),.locked(cart_save_locked),
+    .raw_rdata(gba_save_rdata),.raw_read(cart_eeprom_rd),.write_lock(cart_eeprom_lock),
+    .reset_block(cart_eeprom_reset_block),.result(cart_eeprom_result),
+    .backup_ready(cart_backup_ready),.backup_error(cart_backup_error),.backup_fill(cart_backup_fill),
+    .backup_offset(cart_backup_chunk_offset),.backup_request(cart_eeprom_backup_request),
+    .backup_filled(cart_eeprom_backup_filled),.backup_chunk_error(),
+    .backup_read(cart_backup_read),.backup_word(cart_backup_word),.backup_rdata(cart_eeprom_backup_rdata),
+    .writeback_allowed(cart_eeprom_allowed),
+    .write_permitted(cart_eeprom_width_ok),.backup_fallback(cart_eeprom_backup_fallback)
+`endif
+    );
+`ifdef GBK_GAMEPAK_IMPORT_ONLY
+assign {cart_save_rd,cart_save_lock,cart_save_reset_block}=0;
+`ifndef GBK_GAMEPAK_NATIVE_PREFLIGHT
+assign {cart_backup_active,cart_backup_open,cart_backup_write,cart_backup_load}=0;
+assign {cart_backup_bridge_rdata,cart_backup_transfer,cart_backup_length,cart_backup_offset}=0;
+`endif
+assign {cart_save_busy,cart_save_import_done,cart_save_import_ok,cart_save_result}=
+    {cart_import_busy,cart_import_done,cart_import_ok,cart_import_result};
+assign {cart_save_wr,cart_save_word,cart_save_wdata}={cart_import_write,1'b0,cart_import_word,cart_import_wdata};
+assign {cart_save_pins,cart_save_high,cart_save_ad,cart_save_cs1,cart_save_cs2,cart_save_rd_n,cart_save_wr_n}=
+    {cart_import_pins,cart_import_high,cart_import_ad,cart_import_cs1,cart_import_cs2,cart_import_rd,cart_import_wr};
+`else
+wire cart_save_enabled=cart_save_media && !cart_use_boot_import;
+wire cart_parallel_lock,cart_parallel_reset_block;
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+assign cart_save_lock=cart_parallel_lock || cart_eeprom_lock;
+assign cart_save_reset_block=cart_parallel_reset_block || cart_eeprom_reset_block;
+`else
+assign cart_save_lock=cart_parallel_lock;
+assign cart_save_reset_block=cart_parallel_reset_block;
+`endif
+wire cart_parallel_busy,cart_parallel_done,cart_parallel_ok,cart_parallel_rd,cart_parallel_wr;
+`ifdef GBK_GAMEPAK_FLASH128
+localparam CART_SAVE_ADDRESS_BITS=17;
+`else
+localparam CART_SAVE_ADDRESS_BITS=16;
+`endif
+wire [CART_SAVE_ADDRESS_BITS-3:0] cart_parallel_word;
+wire [31:0] cart_parallel_wdata;
+wire [2:0] cart_parallel_result;
+wire flash_address_drive,flash_data_drive,flash_cs2,flash_rd,flash_wr;
+wire [15:0] flash_pin_address,flash_id;
+wire [CART_SAVE_ADDRESS_BITS-1:0] flash_address;
+wire [7:0] flash_pin_data,flash_rdata,flash_wdata;
+wire flash_ready,flash_done,flash_error,flash_request;
+wire [1:0] flash_operation;
+wire cart_backup_fill,cart_backup_filled,cart_backup_chunk_error;
+wire [16:0] cart_backup_chunk_offset;
+wire cart_write_idle=cart_boot_release_ack && dataslot_allcomplete && !gba_save_export &&
+    !pstate_transport_busy && !cart_backup_active &&
+    !savestate_start && !savestate_load && !dataslot_requestread && !dataslot_requestwrite;
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+`else
+wire cart_commit_start;
+`endif
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+// Saves reach the cartridge automatically; there is no menu command.
+gba_gamepak_save_scheduler writeback_schedule(
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    .clk(clk_74a),.enable((cart_save_enabled && cart_parallel_ok) || cart_eeprom_writeback),
+`else
+    .clk(clk_74a),.enable(cart_save_enabled && cart_parallel_ok),
+`endif
+
+    .ready(cart_write_idle && (pstate_transfer_allowed ||
+        (pstate_reset_request && pstate_reset_ready && !cart_save_busy && !pstate_stopped))),
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    .tick(cart_apf_timeout_tick),.guest_write(guest_save_written || cart_eeprom_commit_now),
+    .restore_write(pstate_save_write && (pstate_save_eeprom==cart_eeprom_owner)),.restore_done(cart_restore_done),
+    .reset_pending(pstate_reset_request),
+    .busy(cart_eeprom_owner ? cart_import_busy : cart_parallel_busy),
+    .result(cart_eeprom_owner ? cart_eeprom_result : cart_parallel_result),.start(cart_commit_start),
+`else
+    .tick(cart_apf_timeout_tick),.guest_write(guest_save_written),
+    .restore_write(pstate_save_write && !pstate_save_eeprom),.restore_done(cart_restore_done),
+    .reset_pending(pstate_reset_request),
+    .busy(cart_parallel_busy),.result(cart_parallel_result),.start(cart_commit_start),
+`endif
+
+    .pending(cart_save_pending),.reset_block(cart_save_flush_block),.restored(cart_save_restored),
+    .status());
+`else
+wire cart_write_requested=bridge_wr && bridge_addr==32'h10000020 &&
+    bridge_wr_data==32'h00000001 && osnotify_inmenu;
+assign cart_commit_start=cart_save_enabled && cart_write_idle && cart_write_requested &&
+    pstate_transfer_allowed && !cart_save_busy;
+`endif
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+`else
+wire cart_save_locked;
+`endif
+synch_3 gamepak_save_lock_ack(.i(gba_save_locked),.o(cart_save_locked),.clk(clk_74a),.rise(),.fall());
+wire cart_save_backup_fallback;
+gba_gamepak_save #(.LINEAR_SAVE(CART_LINEAR_WRITEBACK)
+`ifdef GBK_GAMEPAK_UNSAVED_FALLBACK
+    // A refused or failed write saves the session to CODE-unsaved.sav.
+    ,.FALLBACK_SAVE(1)
+`endif
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    ,.REUSE_BACKUP(1)
+`endif
+`ifdef GBK_GAMEPAK_FLASH128
+    ,.ADDRESS_BITS(17),.LARGE_SAVE(1)
+`endif
+    ) gamepak_save(
+`ifdef GBK_GAMEPAK_FLASH128
+    .large_save(cart_save_large),
+`endif
+    .clk(clk_74a),.enable(cart_save_enabled),.import_start(cart_save_import_start),
+    .commit_start(cart_commit_start),.locked(cart_save_locked),.linear_save(cart_save_linear),
+    .backup_ready(cart_backup_ready),.backup_error(cart_backup_error),.backup_request(cart_save_backup_request),
+    .backup_fallback(cart_save_backup_fallback),
+    .backup_fill(cart_backup_fill),.backup_offset(cart_backup_chunk_offset[CART_SAVE_ADDRESS_BITS-1:0]),
+    .backup_filled(cart_backup_filled),.backup_chunk_error(cart_backup_chunk_error),
+    .write_lock(cart_parallel_lock),.reset_block(cart_parallel_reset_block),.busy(cart_parallel_busy),.import_done(cart_parallel_done),
+    .import_ok(cart_parallel_ok),.result(cart_parallel_result),
+    .flash_request(flash_request),.flash_operation(flash_operation),
+    .flash_address(flash_address),.flash_wdata(flash_wdata),.flash_ready(flash_ready),
+    .flash_done(flash_done),.flash_error(flash_error),.flash_rdata(flash_rdata),.flash_id(flash_id),
+    .raw_read(cart_parallel_rd),.raw_write(cart_parallel_wr),.raw_address(cart_parallel_word),.raw_wdata(cart_parallel_wdata),
+    .raw_idle(pstate_save_idle),.raw_done(pstate_save_done),.raw_error(gba_save_fault),.raw_rdata(gba_save_rdata),
+    .backup_read(cart_backup_read),.backup_word(cart_backup_word),.backup_rdata(cart_backup_rdata));
+// The save controller holds its cursor and source byte until Flash replies.
+gba_gamepak_flash #(.LATCH_REQUEST(0),.LINEAR_SAVE(CART_LINEAR_WRITEBACK)
+`ifdef GBK_GAMEPAK_FLASH128
+    ,.BANKED(1),.ADDRESS_BITS(17)
+`endif
+    ) gamepak_flash(
+`ifdef GBK_GAMEPAK_FLASH128
+    .large_chip(cart_save_large),
+`endif
+    .clk(clk_74a),.enable(cart_save_enabled && cart_parallel_busy),.request(flash_request),
+    .linear_save(cart_save_linear),
+    .operation(flash_operation),.address(flash_address),.write_data(flash_wdata),.data_in(cart_tran_bank1),
+    .ready(flash_ready),.done(flash_done),.error(flash_error),.read_data(flash_rdata),.chip_id(flash_id),
+    .pin_address(flash_pin_address),.pin_data(flash_pin_data),.address_drive(flash_address_drive),
+    .data_drive(flash_data_drive),.cs2_n(flash_cs2),.rd_n(flash_rd),.wr_n(flash_wr));
+gba_gamepak_save_backup #(.VARIABLE_PROFILE(CART_LINEAR_WRITEBACK),.USE_TIMEOUT_TICK(CART_LINEAR_SAVE),
+    .STREAMING(1)
+`ifdef GBK_GAMEPAK_BACKUP_RING
+    // Keep the last eight pre-write images: CODE-00..07.sav plus CODE-bk.idx.
+    ,.RING_SLOTS(8)
+`endif
+    ) gamepak_backup(
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    .clk(clk_74a),.enable(cart_save_enabled || cart_eeprom_writeback),
+    .request(cart_eeprom_owner ? cart_eeprom_backup_request : cart_save_backup_request),
+    .fallback(cart_eeprom_owner ? cart_eeprom_backup_fallback : cart_save_backup_fallback),
+`else
+    .clk(clk_74a),.enable(cart_save_enabled),.request(cart_save_backup_request),
+    .fallback(cart_save_backup_fallback),
+`endif
+
+    .timeout_tick(cart_apf_timeout_tick),
+    .half_capacity(cart_save_linear),.game_code(cart_backup_code),
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    .stream_capacity(cart_eeprom_owner ? (cart_eeprom_narrow ? 18'd512 : 18'd8192) :
+        cart_save_large ? 18'd131072 : cart_save_linear ? 18'd32768 : 18'd65536),
+`else
+    .stream_capacity(cart_save_linear ? 18'd32768 : 18'd65536),
+`endif
+
+    .fill_chunk(cart_backup_fill),.chunk_offset(cart_backup_chunk_offset),
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    .chunk_filled(cart_eeprom_owner ? cart_eeprom_backup_filled : cart_backup_filled),
+    .chunk_error(!cart_eeprom_owner && cart_backup_chunk_error),
+`else
+    .chunk_filled(cart_backup_filled),.chunk_error(cart_backup_chunk_error),
+`endif
+
+    .ready(cart_backup_ready),.error(cart_backup_error),.active(cart_backup_active),
+    .bridge_rd(bridge_rd),.bridge_wr(bridge_wr),.bridge_addr(bridge_addr),
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    .bridge_wdata(bridge_wr_data),.backup_rdata(cart_eeprom_owner ? cart_eeprom_backup_rdata : cart_backup_rdata),
+`else
+    .bridge_wdata(bridge_wr_data),.backup_rdata(cart_backup_rdata),
+`endif
+
+    .backup_read(cart_backup_read),.backup_word(cart_backup_word),.command_open(cart_backup_open),
+    .command_write(cart_backup_write),.command_read(cart_backup_load),
+    .command_done(target_dataslot_done),.command_error(target_dataslot_err),
+    .bridge_rdata(cart_backup_bridge_rdata),.transfer_address(cart_backup_transfer),
+    .transfer_offset(cart_backup_offset),.transfer_length(cart_backup_length));
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+assign cart_save_rd=cart_eeprom_owner ? cart_eeprom_rd : cart_parallel_rd;
+`else
+assign cart_save_rd=cart_parallel_rd;
+`endif
+assign cart_save_busy=cart_import_busy || cart_parallel_busy;
+assign cart_save_import_done=cart_use_boot_import ? cart_import_done : cart_parallel_done;
+assign cart_save_import_ok=cart_use_boot_import ? cart_import_ok : cart_parallel_ok;
+assign cart_save_result=cart_use_boot_import ? cart_import_result : cart_parallel_result;
+assign cart_save_wr=cart_use_boot_import ? cart_import_write : cart_parallel_wr;
+wire [14:0] cart_parallel_word_wide=cart_parallel_word; // zero-extends the 64 KiB build
+assign cart_save_word=cart_use_boot_import ? {1'b0,cart_import_word} : cart_parallel_word_wide;
+assign cart_save_wdata=cart_use_boot_import ? cart_import_wdata : cart_parallel_wdata;
+assign {cart_save_pins,cart_save_high,cart_save_ad,cart_save_cs1,cart_save_cs2,cart_save_rd_n,cart_save_wr_n}=
+    cart_use_boot_import ?
+        {cart_import_pins,cart_import_high,cart_import_ad,cart_import_cs1,cart_import_cs2,cart_import_rd,cart_import_wr} :
+        {flash_pin_data,flash_pin_address,flash_data_drive,flash_address_drive,1'b1,flash_cs2,flash_rd,flash_wr};
+`endif
+`ifndef GBK_GAMEPAK_NATIVE_BUS
+wire [23:0] cart_trial_address=cart_boot_passed ? cart_save_pins : cart_rom_address;
+wire cart_ad_drive=cart_boot_passed ? cart_save_ad : cart_trial_ad_drive;
+wire cart_bank1_drive=cart_boot_passed ? cart_save_high : cart_trial_address_drive;
+wire cart_rd=cart_boot_passed ? cart_save_rd_n : cart_trial_rd_n;
+wire cart_wr=cart_boot_passed ? cart_save_wr_n : cart_trial_wr_n;
+wire cart_cs1=cart_boot_passed ? cart_save_cs1 : cart_trial_cs_n;
+wire cart_cs2=cart_boot_passed ? cart_save_cs2 : cart_trial_cs2_n;
+`endif
+`else
+`ifndef GBK_GAMEPAK_NATIVE_BUS
+wire [23:0] cart_trial_address=cart_rom_address;
+wire cart_ad_drive=cart_trial_ad_drive,cart_bank1_drive=cart_trial_address_drive;
+wire cart_rd=cart_trial_rd_n,cart_wr=cart_trial_wr_n,cart_cs1=cart_trial_cs_n,cart_cs2=cart_trial_cs2_n;
+`endif
+`endif
+wire [23:0] slot_pins;
+wire slot_ad_drive,slot_high_drive,slot_cs1,slot_cs2,slot_rd,slot_wr;
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+wire cart_native_enable=cart_trial_enable && cart_release_game;
+wire cart_native_guest,cart_native_admitted,cart_native_ready,cart_native_write;
+wire [1:0] cart_native_size;
+wire [31:0] cart_native_wdata,cart_native_rdata;
+wire cart_local_ready,cart_local_response,cart_local_error;
+wire [31:0] cart_local_data;
+assign cart_trial_ready=!cart_boot_passed && cart_local_ready;
+assign cart_trial_valid=!cart_boot_passed && cart_local_response;
+assign cart_trial_data=cart_local_data;
+synch_3 cart_native_sync(cart_native_enable,cart_native_guest,clk_core_39936);
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+wire cart_native_write_allowed,cart_native_backup_busy,cart_native_backup_failed;
+wire cart_native_read,cart_native_consume,cart_native_guest_busy,cart_native_reset_quiet;
+wire [26:0] cart_native_read_addr;
+wire cart_native_arm=bridge_wr && bridge_addr==32'h10000020 && bridge_wr_data==32'd1 &&
+    osnotify_inmenu && cart_stats_done && dataslot_allcomplete && !pstate_reset_request;
+synch_3 cart_native_admit(cart_native_enable && !pstate_reset_request,cart_native_admitted,clk_core_39936);
+synch_3 cart_native_drain(!cart_native_admitted && !cart_native_guest_busy,cart_native_reset_quiet,clk_74a);
+gba_gamepak_native_backup native_backup(.clk(clk_74a),.enable(cart_trial_enable && cart_boot_passed),
+    .start(cart_native_arm),.timeout_tick(cart_apf_timeout_tick),.profile_verified(cart_profile_valid),
+    .save_kind(cart_catalog_save),.game_code(cart_game_code),
+    .write_allowed(cart_native_write_allowed),.busy(cart_native_backup_busy),.failed(cart_native_backup_failed),
+    .bus_request(cart_native_read),.bus_consume(cart_native_consume),.bus_address(cart_native_read_addr),
+    .bus_ready(cart_boot_passed && cart_local_ready),.bus_response(cart_boot_passed && cart_local_response),
+    .bus_error(cart_local_error),.bus_data(cart_local_data),
+    .bridge_rd(bridge_rd),.bridge_wr(bridge_wr),.bridge_addr(bridge_addr),.bridge_wdata(bridge_wr_data),
+    .command_done(target_dataslot_done),.command_error(target_dataslot_err),
+    .archive_active(cart_backup_active),.command_open(cart_backup_open),.command_write(cart_backup_write),
+    .command_read(cart_backup_load),.bridge_rdata(cart_backup_bridge_rdata),
+    .transfer_address(cart_backup_transfer),.transfer_offset(cart_backup_offset),.transfer_length(cart_backup_length));
+`else
+wire cart_native_write_allowed=1'b0;
+wire cart_native_guest_busy;
+assign cart_native_admitted=cart_native_guest;
+`endif
+gba_gamepak_native_link #(.HOST_PORT(1)
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+    ,.BYTE_WRITES_ONLY(1)
+`endif
+`ifdef GBK_GAMEPAK_NATIVE_COMPACT_MAILBOX
+    ,.COMPACT_MAILBOX(1)
+`endif
+    ) native_link(
+    .guest_clk(clk_core_39936),.guest_reset(gba_guest_reset),.guest_enable(cart_native_admitted),
+    .guest_request(gba_cart_req),.guest_write(cart_native_write),
+    .guest_address(gba_cart_addr[26:0]),.guest_size(cart_native_size),.guest_wdata(cart_native_wdata),
+    .guest_ready(cart_native_ready),.guest_error(),.guest_busy(cart_native_guest_busy),.guest_rdata(cart_native_rdata),
+    .slot_clk(clk_74a),.slot_enable(cart_trial_enable),.write_allowed(cart_native_write_allowed),
+    .host_mode(!cart_release_game),
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+    .host_request(cart_boot_passed ? cart_native_read : cart_trial_req),
+    .host_consume(cart_boot_passed ? cart_native_consume : cart_trial_reply_ready),
+    .host_address(cart_boot_passed ? cart_native_read_addr : {2'd0,cart_trial_word,2'd0}),
+    .host_size(cart_boot_passed ? 2'd0 : 2'd2),
+`else
+    .host_request(cart_trial_req),.host_consume(cart_trial_reply_ready),
+    .host_address({2'd0,cart_trial_word,2'd0}),.host_size(2'd2),
+`endif
+    .host_ready(cart_local_ready),.host_response(cart_local_response),.host_error(cart_local_error),.host_data(cart_local_data),
+    .ad_in({cart_tran_bank2,cart_tran_bank3}),.high_in(cart_tran_bank1),.pins(slot_pins),
+    .ad_drive(slot_ad_drive),.high_drive(slot_high_drive),
+    .cs1_n(slot_cs1),.cs2_n(slot_cs2),.rd_n(slot_rd),.wr_n(slot_wr));
+`else
+assign {slot_pins,slot_ad_drive,slot_high_drive,slot_cs1,slot_cs2,slot_rd,slot_wr}=
+    {cart_trial_address,cart_ad_drive,cart_bank1_drive,cart_cs1,cart_cs2,cart_rd,cart_wr};
+`endif
+assign cart_tran_bank3 = slot_ad_drive ? slot_pins[7:0] : 8'hzz;
+assign cart_tran_bank3_dir = slot_ad_drive;
+assign cart_tran_bank2 = slot_ad_drive ? slot_pins[15:8] : 8'hzz;
+assign cart_tran_bank2_dir = slot_ad_drive;
+assign cart_tran_bank1 = slot_high_drive ? slot_pins[23:16] : 8'hzz;
+assign cart_tran_bank1_dir = slot_high_drive;
+assign cart_tran_bank0 = {~cart_trial_enable,slot_wr,slot_rd,slot_cs1};
+assign cart_tran_bank0_dir = 1'b1;
+assign cart_tran_pin30 = cart_trial_enable ? slot_cs2 : 1'b0;
+assign cart_tran_pin30_dir = cart_trial_enable ? 1'b1 : 1'bz;
+assign cart_pin30_pwroff_reset = cart_trial_enable;
+`else
 assign cart_tran_bank3 = 8'hzz;
 assign cart_tran_bank3_dir = 1'b0;
 assign cart_tran_bank2 = 8'hzz;
@@ -246,6 +1124,7 @@ assign cart_tran_bank0_dir = 1'b1;
 assign cart_tran_pin30 = 1'b0;      // reset or cs2, we let the hw control it by itself
 assign cart_tran_pin30_dir = 1'bz;
 assign cart_pin30_pwroff_reset = 1'b0;  // hardware can control this
+`endif
 assign cart_tran_pin31 = 1'bz;      // input
 assign cart_tran_pin31_dir = 1'b0;  // input
 
@@ -340,6 +1219,10 @@ always @(*) begin
         bridge_rd_data <= gba_save_bridge_rdata;
     end
     32'h10xxxxxx: begin
+`ifdef GBK_GAMEPAK_SAVE
+        if(bridge_addr==32'h10000024) bridge_rd_data <= cart_save_status_rdata;
+        else
+`endif
         if(bridge_addr==32'h1000001C) bridge_rd_data <= gba_soft_colors_rdata;
         else
 `ifdef GBK_FAST_FORWARD
@@ -357,6 +1240,12 @@ always @(*) begin
     end
 `ifdef GBK_POCKET_STATE
     32'h12xxxxxx: bridge_rd_data <= pstate_bridge_rdata;
+`endif
+`ifdef GBK_GAMEPAK_SAVE
+    32'h13xxxxxx,32'h14xxxxxx: bridge_rd_data <= cart_backup_bridge_rdata;
+`ifdef GBK_GAMEPAK_STATS_FILE
+    32'h15xxxxxx: bridge_rd_data <= cart_stats_file_rdata;
+`endif
 `endif
     endcase
 end
@@ -395,7 +1284,11 @@ assign gba_log_data = 0;
     wire gba_save_requestread_ack;
 `ifdef GBK_PLAYTIME
     wire gba_stats_ack;
-    assign dataslot_requestread_ack=dataslot_requestread_id==16'd3 ? gba_stats_ack : gba_save_requestread_ack;
+    assign dataslot_requestread_ack=(dataslot_requestread_id==16'd3
+`ifdef GBK_GAMEPAK_SAVE
+        || dataslot_requestread_id==16'd4
+`endif
+        ) ? gba_stats_ack : gba_save_requestread_ack;
 `else
     assign dataslot_requestread_ack=gba_save_requestread_ack;
 `endif
@@ -408,6 +1301,10 @@ assign gba_log_data = 0;
     reg gba_cart_large=0;
     always @(posedge clk_74a) begin
         if(gba_cart_load_write) begin
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+            if(cart_trial_selected) gba_cart_large<=cart_boot_bytes>32'h01000000;
+            else
+`endif
             if(bridge_addr==32'h08000000) gba_cart_large<=0;
             else if(bridge_addr[24]) gba_cart_large<=1;
         end
@@ -464,8 +1361,16 @@ assign gba_log_data = 0;
     wire            savestate_load_busy;
     wire            savestate_load_ok;
     wire            savestate_load_err;
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    always @(posedge clk_74a)cart_restore_ok_seen<=savestate_load_ok;
+    assign cart_restore_done=savestate_load_ok && !cart_restore_ok_seen;
+`endif
 `ifdef GBK_POCKET_STATE
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    assign savestate_supported=!cart_trial_selected;
+`else
     assign savestate_supported=1'b1;
+`endif
     assign savestate_addr=32'h12000000;
     assign savestate_size=32'd535528;
     assign savestate_maxloadsize=32'd535528;
@@ -480,6 +1385,7 @@ assign gba_log_data = 0;
     wire pstate_cpu_request,pstate_dma_request,pstate_hold,pstate_reg_write,pstate_cpu_idle,pstate_dma_idle,pstate_held,pstate_reg_valid;
     wire [15:0] pstate_reg_addr;
     wire [31:0] pstate_reg_wdata,pstate_reg_rdata;
+    wire [1:0] pstate_reg_shift;
     wire pstate_guest_idle,pstate_resume_prepare,pstate_resume_ready,pstate_resume_complete;
     wire pstate_bulk_valid,pstate_bulk_write,pstate_bulk_consume,pstate_bulk_ready,pstate_bulk_response,pstate_bulk_error;
     wire [31:0] pstate_bulk_addr,pstate_bulk_wdata,pstate_bulk_rdata;
@@ -494,7 +1400,14 @@ assign gba_log_data = 0;
     wire pstate_rtc_lock,pstate_rtc_start,pstate_rtc_restore,pstate_rtc_write,pstate_rtc_ready,pstate_rtc_done,pstate_rtc_error;
     wire [1:0] pstate_rtc_index;
     wire [31:0] pstate_rtc_wdata,pstate_rtc_rdata;
-    wire pstate_transfer_allowed=!savestate_start_busy && !savestate_load_busy && !pstate_busy && !pstate_reset_request;
+    wire pstate_transfer_allowed=!savestate_start_busy && !savestate_load_busy && !pstate_busy && !pstate_reset_request
+`ifdef GBK_GAMEPAK_SAVE
+        && !cart_save_busy
+`endif
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+        && !cart_native_backup_busy
+`endif
+        ;
     reg pstate_running_previous=0;
     always @(posedge clk_74a)pstate_running_previous<=reset_n;
     wire pstate_host_reset=memory_startup_reset || (pstate_running_previous && !reset_n);
@@ -505,6 +1418,12 @@ assign gba_log_data = 0;
     reg [31:0] pstate_rom_size=0;
     always @(posedge clk_74a)begin
         if(memory_startup_reset)begin pstate_rom_begin<=0;pstate_rom_size<=0;end
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+        else if(cart_trial_selected)begin
+            pstate_rom_begin<=cart_copy_start;
+            pstate_rom_size<=cart_boot_bytes;
+        end
+`endif
         else begin
             pstate_rom_begin<=(dataslot_requestwrite && dataslot_requestwrite_id==0) ||
                               (dataslot_update && dataslot_update_id==0);
@@ -513,11 +1432,38 @@ assign gba_log_data = 0;
     end
     gba_state_identity pstate_identity(.clk(clk_74a),.reset(memory_startup_reset),
         .rom_begin(pstate_rom_begin),.rom_size(pstate_rom_size),
-        .rom_write(gba_cart_load_write),.bios_write(gba_bios_load_write),
-        .rom_offset({7'd0,gba_cart_load_addr,2'b0}),.bios_offset({8'd0,bridge_addr[23:0]}),.load_data(gba_load_wdata),
+        .rom_write(gba_cart_load_write
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+            || cart_boot_write
+`endif
+            ),.bios_write(gba_bios_load_write),
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+        .catalog_active(cart_catalog_active),.catalog_begin(cart_catalog_read),.catalog_write(cart_catalog_word),
+        .catalog_crc_idle(cart_catalog_crc_idle),.catalog_crc(cart_catalog_crc),.catalog_crc_error(cart_catalog_crc_error),
+`endif
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+        .rom_stream_idle(cart_boot_load_ready),
+        .rom_offset({7'd0,(cart_trial_selected ? cart_boot_word : gba_cart_load_addr),2'b0}),
+`else
+        .rom_offset({7'd0,gba_cart_load_addr,2'b0}),
+`endif
+        .bios_offset({8'd0,bridge_addr[23:0]}),.load_data(gba_rom_or_bios_load_data),
         .ready(pstate_identity_ready),.rom_crc(pstate_rom_crc),.rom_bytes(pstate_rom_bytes),.bios_crc(pstate_bios_crc));
-    gba_state_host pstate_host(.clk(clk_74a),.reset(pstate_host_reset),.enabled(1'b1),
-        .identity_ready(pstate_identity_ready && reset_n),.owners_idle(dataslot_allcomplete && !gba_save_export),
+    gba_state_host pstate_host(.clk(clk_74a),.reset(pstate_host_reset),.enabled(savestate_supported),
+        .identity_ready(pstate_identity_ready && reset_n
+`ifdef GBK_GAMEPAK_BOOT_RTC_INIT
+            && (!cart_trial_selected || (cart_boot_release_ack && gba_rtc_boot_ready))
+`endif
+`ifdef GBK_GAMEPAK_SAVE
+`ifndef GBK_GAMEPAK_AUTO_WRITEBACK
+            && !cart_save_busy
+`endif
+`endif
+        ),.owners_idle(dataslot_allcomplete && !gba_save_export
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+            && !cart_save_busy
+`endif
+        ),
         .capture_request(savestate_start),.load_request(savestate_load),
         .capture_ack(savestate_start_ack),.capture_busy(savestate_start_busy),.capture_ok(savestate_start_ok),.capture_error(savestate_start_err),
         .load_ack(savestate_load_ack),.load_busy(savestate_load_busy),.load_ok(savestate_load_ok),.load_error(savestate_load_err),
@@ -538,6 +1484,9 @@ assign gba_log_data = 0;
         .state_cpu_request(pstate_cpu_request),.state_dma_request(pstate_dma_request),.state_hold(pstate_hold),
         .state_cpu_quiescent(pstate_cpu_idle),.state_dma_quiescent(pstate_dma_idle),.state_held(pstate_held),
         .state_reg_write(pstate_reg_write),.state_reg_addr(pstate_reg_addr),.state_reg_wdata(pstate_reg_wdata),
+`ifdef GBK_STATE_SERIAL
+        .state_reg_shift(pstate_reg_shift),
+`endif
         .state_reg_valid(pstate_reg_valid),.state_reg_rdata(pstate_reg_rdata),
         .state_bulk_valid(pstate_bulk_valid),.state_bulk_write(pstate_bulk_write),.state_bulk_response_ready(pstate_bulk_consume),
         .state_bulk_addr(pstate_bulk_addr),.state_bulk_wdata(pstate_bulk_wdata),.state_bulk_ready(pstate_bulk_ready),
@@ -623,6 +1572,9 @@ end
     gba_save_datatable #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE)) save_datatable(
         .clk(clk_74a),.running(reset_n),
         .host_access(bridge_addr[31:24]==8'hf8 && bridge_addr[15:12]==4'h2),
+`ifdef GBK_GAMEPAK_SAVE
+        .cartridge(cart_trial_selected),
+`endif
         .save_size(gba_save_export_size),
         .address(datatable_addr),.data(datatable_data),.write_enable(datatable_wren));
 `else
@@ -648,7 +1600,17 @@ core_bridge_cmd #(.BOOT_DIAGNOSTIC(GBA_BOOT_DIAGNOSTIC),.BOOT_DIAGNOSTIC_POLLS(G
     .clk                ( clk_74a ),
     .reset_n            ( reset_n ),
 `ifdef GBK_POCKET_STATE
-    .state_reset_request(pstate_reset_request),.state_reset_ready(pstate_reset_ready),.state_transfer_allowed(pstate_transfer_allowed),
+    .state_reset_request(pstate_reset_request),.state_reset_ready(pstate_reset_ready
+`ifdef GBK_GAMEPAK_SAVE
+        && !cart_save_reset_block
+`endif
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+        && !cart_save_flush_block
+`endif
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+        && (!cart_trial_selected || cart_native_reset_quiet)
+`endif
+        ),.state_transfer_allowed(pstate_transfer_allowed),
 `endif
 
     .bridge_endian_little   ( bridge_endian_little ),
@@ -660,9 +1622,20 @@ core_bridge_cmd #(.BOOT_DIAGNOSTIC(GBA_BOOT_DIAGNOSTIC),.BOOT_DIAGNOSTIC_POLLS(G
     
     .status_boot_done       ( status_boot_done ),
     .boot_diagnostic_signals( boot_diagnostic_signals ),
+`ifdef GBK_GAMEPAK_HEADER_TRIAL
+`ifdef GBK_GAMEPAK_BOOT_TRACE
+    .debug_event_valid(cart_trial_selected ? (cart_trial_event_valid || cart_trace_valid) : gba_log_valid),
+    .debug_event_data(cart_trial_selected ? (cart_trial_event_valid ? cart_trial_event_data : cart_trace_data) : gba_log_data),
+`else
+    .debug_event_valid(cart_trial_selected ? cart_trial_event_valid : gba_log_valid),
+    .debug_event_data(cart_trial_selected ? cart_trial_event_data : gba_log_data),
+`endif
+    .debug_event_ready(cart_trial_event_ready),
+`else
     .debug_event_valid(gba_log_valid),
     .debug_event_data(gba_log_data),
     .debug_event_ready(gba_log_ready),
+`endif
     .status_setup_done      ( status_setup_done ),
     .status_running         ( status_running ),
 
@@ -707,22 +1680,78 @@ core_bridge_cmd #(.BOOT_DIAGNOSTIC(GBA_BOOT_DIAGNOSTIC),.BOOT_DIAGNOSTIC_POLLS(G
     .savestate_load_err     ( savestate_load_err ),
 
     .osnotify_inmenu        ( osnotify_inmenu ),
+`ifdef GBK_GAMEPAK_HEADER_TRIAL
+    .osnotify_cart_selected ( cart_trial_selected ),
+    .osnotify_cart_power    ( cart_trial_power ),
+    .osnotify_cart_adapter  ( cart_trial_adapter ),
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+    .osnotify_cart_gba_trial( cart_trial_gba ),
+`endif
+`endif
     
+`ifdef GBK_GAMEPAK_SAVE
+`ifdef GBK_GAMEPAK_STATS_FILE
+    .target_dataslot_read       (
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+        cart_catalog_active ? cart_catalog_read :
+`endif
+        cart_stats_active ? cart_stats_read : cart_backup_active ? cart_backup_load : target_dataslot_read ),
+    .target_dataslot_openfile   ( cart_stats_active ? cart_stats_open : cart_backup_open ),
+    .cart_stats_slot            ( cart_trial_selected && cart_stats_attached ),
+`else
+    .target_dataslot_read       ( cart_backup_active ? cart_backup_load : target_dataslot_read ),
+    .target_dataslot_openfile   ( cart_backup_open ),
+    .cart_stats_slot            ( cart_trial_selected && (cart_save_import_ok || cart_stats_done) ),
+`endif
+    .target_dataslot_write      ( cart_backup_write ),
+    .target_dataslot_getfile    ( 1'b0 ),
+`else
     .target_dataslot_read       ( target_dataslot_read ),
     .target_dataslot_write      ( target_dataslot_write ),
     .target_dataslot_getfile    ( target_dataslot_getfile ),
     .target_dataslot_openfile   ( target_dataslot_openfile ),
+`endif
     
     .target_dataslot_ack        ( target_dataslot_ack ),
     .target_dataslot_done       ( target_dataslot_done ),
     .target_dataslot_err        ( target_dataslot_err ),
 
+`ifdef GBK_GAMEPAK_SAVE
+`ifdef GBK_GAMEPAK_STATS_FILE
+    .target_dataslot_id         (
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+        cart_catalog_active ? 16'd6 :
+`endif
+        cart_stats_active ? 16'd4 : cart_backup_active ? 16'd5 : target_dataslot_id ),
+    .target_dataslot_bridgeaddr (
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+        cart_catalog_active ? 32'h16000000 :
+`endif
+        cart_stats_active ? 32'h10000140 : cart_backup_active ? cart_backup_transfer : target_dataslot_bridgeaddr ),
+    .target_dataslot_length     (
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+`ifndef GBK_GAMEPAK_CATALOG_ROM
+`ifndef GBK_GAMEPAK_DETECT
+        cart_catalog_active ? `GBK_GAMEPAK_CATALOG_BYTES :
+`endif
+`endif
+`endif
+        cart_stats_active ? 32'd48 : cart_backup_active ? cart_backup_length : target_dataslot_length ),
+    .target_buffer_param_struct ( cart_stats_active ? 32'h15000000 : 32'h13000000 ),
+`else
+    .target_dataslot_id         ( cart_backup_active ? 16'd5 : target_dataslot_id ),
+    .target_dataslot_bridgeaddr ( cart_backup_active ? cart_backup_transfer : target_dataslot_bridgeaddr ),
+    .target_dataslot_length     ( cart_backup_active ? cart_backup_length : target_dataslot_length ),
+    .target_buffer_param_struct ( 32'h13000000 ),
+`endif
+    .target_dataslot_slotoffset ( cart_backup_active ? cart_backup_offset : 32'd0 ),
+`else
     .target_dataslot_id         ( target_dataslot_id ),
     .target_dataslot_slotoffset ( target_dataslot_slotoffset ),
     .target_dataslot_bridgeaddr ( target_dataslot_bridgeaddr ),
     .target_dataslot_length     ( target_dataslot_length ),
-
     .target_buffer_param_struct ( target_buffer_param_struct ),
+`endif
     .target_buffer_resp_struct  ( target_buffer_resp_struct ),
     
     .datatable_addr         ( datatable_addr ),
@@ -1223,6 +2252,24 @@ wire gba_overlay_wall_valid;
 wire [15:0] gba_overlay_wall;
 wire [27:0] gba_overlay_session,gba_overlay_total;
 gba_playtime_host #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE)) playtime_host(.clk(clk_74a),.video_clk(clk_core_12288),.video_reset(core_video_reset),
+`ifdef GBK_GAMEPAK_SAVE
+    .gamepak_mode(cart_trial_selected),
+`ifdef GBK_GAMEPAK_STATS_FILE
+    .gamepak_stats_accept(cart_stats_accept),
+`else
+    .gamepak_stats_start(cart_stats_start),.gamepak_stats_done(cart_stats_done),
+`endif
+`endif
+`ifdef GBK_GAMEPAK_BOOT_RTC_INIT
+    .gamepak_begin(cart_boot_start),
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    .gamepak_identity_write(cart_trial_valid && cart_trial_reply_ready && cart_trial_word[22:2]==21'h00000a),
+    .gamepak_identity_index(cart_trial_word[1:0]),.gamepak_identity_data(cart_trial_data),
+`else
+    .gamepak_identity_write(cart_boot_write && cart_boot_word[22:2]==21'h00000a),
+    .gamepak_identity_index(cart_boot_word[1:0]),.gamepak_identity_data(cart_boot_data),
+`endif
+`endif
 `ifdef GBK_SAVESTATE
 `ifdef GBK_POCKET_STATE
     .state_rtc_lock(pstate_rtc_lock),.state_rtc_start(pstate_rtc_start),.state_rtc_restore(pstate_rtc_restore),.state_rtc_word_write(pstate_rtc_write),
@@ -1238,6 +2285,14 @@ gba_playtime_host #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE)) playtime_host(.clk(cl
 `ifdef GBK_POCKET_STATE
         || savestate_start_busy || savestate_load_busy
 `endif
+`ifdef GBK_GAMEPAK_SAVE
+`ifndef GBK_GAMEPAK_AUTO_WRITEBACK
+        || cart_save_busy
+`endif
+`endif
+`ifdef GBK_GAMEPAK_BOOT_RTC_INIT
+        || (cart_trial_selected && !cart_boot_release_ack)
+`endif
     ),.guest_stopped(gba_guest_stopped),
     .bridge_wr(bridge_wr),.bridge_rd(bridge_rd),.endian_little(bridge_endian_little),
     .bridge_addr(bridge_addr),.bridge_wr_data(bridge_wr_data),
@@ -1250,7 +2305,18 @@ gba_playtime_host #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE)) playtime_host(.clk(cl
     .video_show(gba_overlay_show),.video_corner(gba_overlay_corner),
     .video_wall_valid(gba_overlay_wall_valid),.video_wall(gba_overlay_wall),
     .video_session(gba_overlay_session),.video_total(gba_overlay_total));
-gba_playtime_overlay playtime_overlay(.clk(clk_core_12288),.reset(core_video_reset),
+gba_playtime_overlay #(
+`ifdef GBK_GAMEPAK_LOADING_SCREEN
+    .LOADING(1)
+`else
+    .LOADING(0)
+`endif
+    ) playtime_overlay(.clk(clk_core_12288),.reset(core_video_reset),
+`ifdef GBK_GAMEPAK_LOADING_SCREEN
+    .loading(cart_loading_video),.load_failed(cart_load_failed_video),.load_progress(cart_progress_video),
+`else
+    .loading(1'b0),.load_failed(1'b0),.load_progress(8'd0),
+`endif
     .rgb_in(gba_apf_rgb),.de_in(gba_apf_de),.skip_in(gba_apf_skip),.hs_in(gba_apf_hs),.vs_in(gba_apf_vs),
     .show(gba_overlay_show),.corner(gba_overlay_corner),.wall_valid(gba_overlay_wall_valid),
     .wall_hhmm(gba_overlay_wall),.session_hhmm(gba_overlay_session),.total_hhmm(gba_overlay_total),
@@ -1362,8 +2428,27 @@ wire        gba_bios_load_write = bridge_wr && (bridge_addr[31:24] == 8'h00);
 wire [11:0] gba_bios_load_addr = bridge_addr[13:2];
 wire gba_cart_load_write;
 wire [22:0] gba_cart_load_addr;
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+wire gba_asset_load_write;
+wire [22:0] gba_asset_load_addr;
+gba_rom_load_decode rom_load_decode(.bridge_write(bridge_wr),.bridge_addr(bridge_addr),
+    .load_write(gba_asset_load_write),.load_addr(gba_asset_load_addr));
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+// The physical stream is consumed by the identity engine only. Gameplay
+// reads the slot directly, so there is no second copy in the SD ROM cache.
+assign cart_boot_load_idle=cart_boot_load_ready;
+assign gba_cart_load_write=!cart_trial_selected && gba_asset_load_write;
+assign gba_cart_load_addr=gba_asset_load_addr;
+`else
+assign gba_cart_load_write=cart_trial_selected ? cart_boot_write : gba_asset_load_write;
+assign gba_cart_load_addr=cart_trial_selected ? cart_boot_word : gba_asset_load_addr;
+`endif
+wire [31:0] gba_rom_or_bios_load_data=cart_boot_write ? cart_boot_data : gba_load_wdata;
+`else
 gba_rom_load_decode rom_load_decode(.bridge_write(bridge_wr),.bridge_addr(bridge_addr),
     .load_write(gba_cart_load_write),.load_addr(gba_cart_load_addr));
+wire [31:0] gba_rom_or_bios_load_data=gba_load_wdata;
+`endif
 // Ignore optional RTC trailers beyond the 128 KiB Flash array.
 wire gba_save_load_write = gba_save_write_allowed && bridge_wr && bridge_addr[31:24] == 8'h0e &&
                           bridge_addr[23:17] == 0;
@@ -1387,11 +2472,17 @@ wire [1:0] gba_fast_forward_speed;
 wire [31:0] gba_fast_forward_rdata;
 gba_fast_forward fast_forward_control(.host_clk(clk_74a),.cpu_clk(clk_core_39936),.reset(~reset_n),
     .in_menu(osnotify_inmenu),
+    // Fast-forward waits until a Play Cartridge game is released: the copy
+    // does not run the guest, and the scanout keeps running while it is held
+    // in reset (suspect in a rare garbled-tile startup, never reproduced).
+    .suspended(1'b0
 `ifdef GBK_POCKET_STATE
-    .suspended(pstate_busy),
-`else
-    .suspended(1'b0),
+        || pstate_busy
 `endif
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+        || (cart_trial_selected && !cart_boot_release_ack)
+`endif
+    ),
     .hold_button(cont1_key[6]),.bridge_wr(bridge_wr),.bridge_rd(bridge_rd),
     .endian_little(bridge_endian_little),.bridge_addr(bridge_addr),.bridge_wdata(bridge_wr_data),
     .bridge_rdata(gba_fast_forward_rdata),.active(gba_fast_forward_active),.realign(gba_fast_forward_realign),
@@ -1407,6 +2498,83 @@ localparam GBA_REGION_PROFILE=1;
 `else
 localparam GBA_REGION_PROFILE=0;
 `endif
+`ifdef GBK_GAMEPAK_BOOT_RESET_FIX
+// Play Cartridge has no APF-derived RTC sidecar. Keep the SD import wait
+// on the asset path and release a verified Game Pak at the frame boundary.
+wire gba_guest_reset=~reset_n ||
+    (cart_trial_selected ? (!cart_boot_frame_ready
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+       || !cart_boot_release_video
+`endif
+       ) : !gba_rtc_boot_ready);
+`else
+wire gba_guest_reset=~reset_n || !gba_rtc_boot_ready
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+    || (cart_trial_selected && !cart_boot_frame_ready)
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+    || (cart_trial_selected && !cart_boot_release_video)
+`endif
+`elsif GBK_GAMEPAK_BOOT_TRIAL
+    || (cart_trial_selected && !cart_boot_release_video)
+`elsif GBK_GAMEPAK_HEADER_TRIAL
+    || cart_trial_selected
+`endif
+    ;
+`endif
+`ifdef GBK_GAMEPAK_BOOT_TRACE
+// Sample milestones for one cartridge launch. Sticky CPU-domain bits can
+// cross independently because the report makes no claim about their ordering.
+reg [6:0] cart_trace_cpu=0;
+wire [6:0] cart_trace_cpu_sync;
+always @(posedge clk_core_39936) begin
+    if(gba_guest_reset)cart_trace_cpu<=0;
+    else cart_trace_cpu<=cart_trace_cpu | {
+        gba_guest_stopped,
+        !gba_debug_ppu_dispcnt[7],
+        gba_debug_pc[31:24]==8'h08,
+        gba_cart_req && gba_cart_ready,
+        gba_cart_req,
+        gba_debug_pc!=32'd0,
+        1'b1
+    };
+end
+`ifdef GBK_GAMEPAK_BOOT_RESET_FIX
+// Keep independent synchronizer stages. The generic shift was packed with
+// unrelated signals into a RAM-based shift register in the first fit.
+(* preserve, dont_merge, altera_attribute="-name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *)
+reg [6:0] cart_trace_stage1=0,cart_trace_stage2=0,cart_trace_stage3=0;
+always @(posedge clk_74a) begin
+    cart_trace_stage1<=cart_trace_cpu;
+    cart_trace_stage2<=cart_trace_stage1;
+    cart_trace_stage3<=cart_trace_stage2;
+end
+assign cart_trace_cpu_sync=cart_trace_stage3;
+`else
+synch_3 #(.WIDTH(7)) cart_trace_crossing(.i(cart_trace_cpu),.o(cart_trace_cpu_sync),
+    .clk(clk_74a),.rise(),.fall());
+`endif
+
+// Allow about seven seconds for the complete physical copy and BIOS handoff.
+// The timeout still reports progress when the normal release event never fires.
+reg [28:0] cart_trace_timer=0;
+reg cart_trace_sent=0;
+assign cart_trace_valid=reset_n && cart_trial_selected && (&cart_trace_timer) && !cart_trace_sent;
+`ifdef GBK_GAMEPAK_BOOT_RESET_FIX
+assign cart_trace_data={16'h4354,1'b1,gba_rtc_boot_ready,1'b0,cart_trial_rejected,cart_boot_started,
+`else
+assign cart_trace_data={16'h4354,3'd0,cart_trial_rejected,cart_boot_started,
+`endif
+    cart_boot_drained,cart_boot_passed,cart_boot_failed,cart_boot_release_ack,cart_trace_cpu_sync};
+always @(posedge clk_74a) begin
+    if(!reset_n || !cart_trial_selected)begin
+        cart_trace_timer<=0;cart_trace_sent<=0;
+    end else begin
+        if(!(&cart_trace_timer))cart_trace_timer<=cart_trace_timer+1'b1;
+        if(cart_trace_valid && !cart_trial_event_valid && cart_trial_event_ready)cart_trace_sent<=1;
+    end
+end
+`endif
+
 gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTERNAL_SAVE(GBA_EXTERNAL_SAVE),.RESET_PC(32'h00000000), .EXTERNAL_CARTRIDGE(1'b1),
                   .EXTERNAL_EWRAM(1'b1), .RENDER_SCHEDULER(1'b1), .NATIVE_TIMING(1'b1),.FAST_CPU(1),
                   .REGION_PROFILE(GBA_REGION_PROFILE),.ROM_PROFILE(GBA_REGION_PROFILE),
@@ -1421,7 +2589,21 @@ gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTE
 `ifdef GBK_POCKET_STATE
     .state_cpu_request(pstate_cpu_request),.state_dma_request(pstate_dma_request),.state_hold(pstate_hold),
     .state_reg_write(pstate_reg_write),.state_reg_addr(pstate_reg_addr),.state_reg_wdata(pstate_reg_wdata),
-    .state_save_raw_access(pstate_save_access),.state_save_raw_eeprom(pstate_save_eeprom && pstate_save_access),
+`ifdef GBK_STATE_SERIAL
+    .state_reg_shift(pstate_reg_shift),
+`endif
+    .state_save_raw_access(pstate_save_access
+`ifdef GBK_GAMEPAK_SAVE
+        || cart_save_busy
+`endif
+        ),.state_save_raw_eeprom(pstate_save_eeprom && pstate_save_access
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+        || (cart_eeprom_owner && cart_import_busy)
+`endif
+        ),
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+    .cart_eeprom_import(cart_eeprom_owner && cart_import_busy),
+`endif
     .state_save_raw_idle(pstate_save_idle),.state_save_raw_done(pstate_save_done),
     .state_cpu_quiescent(pstate_cpu_idle),.state_dma_quiescent(pstate_dma_idle),.state_held(pstate_held),
     .state_reg_valid(pstate_reg_valid),.state_reg_rdata(pstate_reg_rdata),
@@ -1440,6 +2622,9 @@ gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTE
     // boot/readiness on state-buffer initialization or leave hold inputs open.
     .state_cpu_request(1'b0),.state_dma_request(1'b0),.state_hold(1'b0),.state_reg_write(1'b0),
     .state_reg_addr(16'd0),.state_reg_wdata(32'd0),
+`ifdef GBK_STATE_SERIAL
+    .state_reg_shift(2'd0),
+`endif
     .state_save_raw_access(1'b0),.state_save_raw_eeprom(1'b0),.state_save_raw_idle(),.state_save_raw_done(),
     .state_cpu_quiescent(),.state_dma_quiescent(),.state_held(),.state_reg_valid(),.state_reg_rdata(),
     .state_bulk_valid(1'b0),.state_bulk_write(1'b0),.state_bulk_response_ready(1'b0),
@@ -1459,7 +2644,7 @@ gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTE
     .audio_left(gba_audio_left),.audio_right(gba_audio_right),
     .clk(clk_core_12288),.cpu_clk(clk_core_39936),.debug_cycle_profile(gba_cycle_profile),.debug_rom_profile(gba_rom_profile),.debug_stall_profile(gba_stall_profile),
     .fast_clk(clk_core_133),
-    .reset(~reset_n || !gba_rtc_boot_ready),
+    .reset(gba_guest_reset),
     .rtc_host_epoch(rtc_epoch_seconds),.rtc_persistence_request(gba_rtc_request),
     .rtc_persistence_operation(gba_rtc_operation),.rtc_persistence_payload(gba_rtc_payload),
     .rtc_persistence_acknowledge(gba_rtc_acknowledge),.rtc_persistence_reply(gba_rtc_reply),
@@ -1472,9 +2657,24 @@ gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTE
     .cart_load_reset(memory_startup_reset),
     .cart_load_write(gba_cart_load_write),
     .cart_load_addr(gba_cart_load_addr),
-    .cart_load_wdata(gba_load_wdata),
+`ifdef GBK_GAMEPAK_NATIVE_PREFLIGHT
+    .cart_load_wdata(gba_load_wdata),.cart_load_ready(),.cart_load_idle(),
+`else
+    .cart_load_wdata(gba_rom_or_bios_load_data),
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+    .cart_load_ready(cart_boot_load_ready),.cart_load_idle(cart_boot_load_idle),
+`endif
+`endif
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+    .cart_boot_scanout(!core_video_reset && cart_trial_selected), // video-clock consumer
+    .cart_boot_frame_start(cart_boot_frame_start),
+`endif
 `ifdef GBK_POCKET_STATE
-    .save_load_read(pstate_save_access ? pstate_save_read : (gba_save_read_allowed && bridge_rd && bridge_addr[31:24]==8'h0e && bridge_addr[23:17]==0)),
+    .save_load_read(
+`ifdef GBK_GAMEPAK_SAVE
+        cart_save_busy ? cart_save_rd :
+`endif
+        pstate_save_access ? pstate_save_read : (gba_save_read_allowed && bridge_rd && bridge_addr[31:24]==8'h0e && bridge_addr[23:17]==0)),
 `else
     .save_load_read(gba_save_read_allowed && bridge_rd && bridge_addr[31:24]==8'h0e && bridge_addr[23:17]==0),
 `endif
@@ -1482,18 +2682,46 @@ gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTE
     .save_mem_a(sram_a),.save_mem_dq(sram_dq),.save_mem_oe_n(sram_oe_n),
     .save_mem_we_n(sram_we_n),.save_mem_ub_n(sram_ub_n),.save_mem_lb_n(sram_lb_n),
     .save_sram(gba_save_sram),
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+    .cart_save_profile(cart_boot_passed ? cart_catalog_save : 3'd0),
+`ifdef GBK_GAMEPAK_DETECT
+    .save_flash512_signature(gba_save_flash512_signature),.save_flash1m_signature(gba_save_flash1m_signature),
+`endif
+`endif
     .save_eeprom(gba_save_eeprom),.save_eeprom_large(gba_eeprom_large),.cart_large(gba_cart_large),
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    .save_eeprom_width(gba_eeprom_game_width),.save_eeprom_commit(gba_eeprom_commit),
+`endif
 `ifdef GBK_POCKET_STATE
-    .save_load_write(pstate_save_access ? pstate_save_write : gba_save_load_write),
-    .save_load_addr(pstate_save_access ? pstate_save_addr : bridge_addr[16:2]),
-    .save_load_wdata(pstate_save_access ? pstate_save_wdata : gba_load_wdata),
+    .save_load_write(
+`ifdef GBK_GAMEPAK_SAVE
+        cart_save_busy ? cart_save_wr :
+`endif
+        pstate_save_access ? pstate_save_write : gba_save_load_write),
+    .save_load_addr(
+`ifdef GBK_GAMEPAK_SAVE
+        cart_save_busy ? cart_save_word :
+`endif
+        pstate_save_access ? pstate_save_addr : bridge_addr[16:2]),
+    .save_load_wdata(
+`ifdef GBK_GAMEPAK_SAVE
+        cart_save_busy ? cart_save_wdata :
+`endif
+        pstate_save_access ? pstate_save_wdata : gba_load_wdata),
 `else
     .save_load_write(gba_save_load_write),
     .save_load_addr(bridge_addr[16:2]),
     .save_load_wdata(gba_load_wdata),
 `endif
     .save_load_rdata(gba_save_rdata),
-    .save_export_lock(gba_save_export), .save_export_locked(gba_save_locked),
+    .save_export_lock(gba_save_export
+`ifdef GBK_GAMEPAK_SAVE
+        || cart_save_lock
+`endif
+        ), .save_export_locked(gba_save_locked),
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    .guest_save_written(guest_save_written),
+`endif
     .debug_restart_context(gba_restart_context),
     .debug_restart_valid(gba_restart_valid),
     .bios_load_write(gba_bios_load_write),
@@ -1501,6 +2729,10 @@ gba_system_top #(.RTC_PERSISTENCE(GBA_RTC_PERSISTENCE),.EEPROM(GBA_EEPROM),.EXTE
     .bios_load_wdata(gba_load_wdata),
     .cart_req(gba_cart_req),
     .cart_addr(gba_cart_addr),
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    .native_cart(cart_native_guest),.native_cart_ready(cart_native_ready),.native_cart_rdata(cart_native_rdata),
+    .cart_write(cart_native_write),.cart_size(cart_native_size),.cart_wdata(cart_native_wdata),
+`endif
     .cart_rdata(gba_cart_rdata),
     .cart_ready(gba_cart_ready),
     .cram_a(cram0_a),

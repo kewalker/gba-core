@@ -2,6 +2,20 @@
 // cartridge header identity is title[96] + game code[32], captured at load.
 module gba_playtime_host #(parameter integer CLOCK_HZ=74250000, parameter RTC_PERSISTENCE=0)(
     input wire clk,video_clk,video_reset,running,in_menu,guest_stopped,
+`ifdef GBK_GAMEPAK_BOOT_RTC_INIT
+    input wire gamepak_begin,gamepak_identity_write,
+    input wire [1:0] gamepak_identity_index,
+    input wire [31:0] gamepak_identity_data,
+`endif
+`ifdef GBK_GAMEPAK_SAVE
+    input wire gamepak_mode,
+`ifdef GBK_GAMEPAK_STATS_FILE
+    input wire gamepak_stats_accept,
+`else
+    input wire gamepak_stats_start,
+    output wire gamepak_stats_done,
+`endif
+`endif
 `ifdef GBK_SAVESTATE
     input wire state_rtc_lock,state_rtc_start,state_rtc_restore,state_rtc_word_write,
     input wire [1:0] state_rtc_word_index,
@@ -30,9 +44,23 @@ module gba_playtime_host #(parameter integer CLOCK_HZ=74250000, parameter RTC_PE
     output wire [27:0] video_session,video_total
 );
     wire cart_write=bridge_wr && bridge_addr[31:25]==7'b0000100;
-    wire new_game=cart_write && bridge_addr==32'h08000000;
+    wire new_game=(cart_write && bridge_addr==32'h08000000)
+`ifdef GBK_GAMEPAK_BOOT_RTC_INIT
+        || gamepak_begin
+`endif
+        ;
     wire [31:0] load_data=endian_little ? bridge_wr_data :
         {bridge_wr_data[7:0],bridge_wr_data[15:8],bridge_wr_data[23:16],bridge_wr_data[31:24]};
+    wire asset_identity_write=cart_write && bridge_addr[24:4]==21'h00000a;
+`ifdef GBK_GAMEPAK_BOOT_RTC_INIT
+    wire identity_write=asset_identity_write || gamepak_identity_write;
+    wire [1:0] identity_index=gamepak_identity_write ? gamepak_identity_index : bridge_addr[3:2];
+    wire [31:0] identity_data=gamepak_identity_write ? gamepak_identity_data : load_data;
+`else
+    wire identity_write=asset_identity_write;
+    wire [1:0] identity_index=bridge_addr[3:2];
+    wire [31:0] identity_data=load_data;
+`endif
     // Interact scalars use network word order, unlike little-endian file data.
     wire [31:0] setting_data=endian_little ?
         {bridge_wr_data[7:0],bridge_wr_data[15:8],bridge_wr_data[23:16],bridge_wr_data[31:24]} : bridge_wr_data;
@@ -44,9 +72,9 @@ module gba_playtime_host #(parameter integer CLOCK_HZ=74250000, parameter RTC_PE
     always @(posedge clk)begin
         stopped_sync<={stopped_sync[1:0],guest_stopped};
         if(new_game)begin game_id<=0;header_seen<=0;end
-        if(cart_write && bridge_addr[24:4]==21'h00000a)begin
-            game_id[bridge_addr[3:2]*32+:32]<=load_data;
-            header_seen[bridge_addr[3:2]]<=1;
+        if(identity_write)begin
+            game_id[identity_index*32+:32]<=identity_data;
+            header_seen[identity_index]<=1;
         end
         if(bridge_wr)begin
             case(bridge_addr)
@@ -66,6 +94,56 @@ module gba_playtime_host #(parameter integer CLOCK_HZ=74250000, parameter RTC_PE
         .host_toggle,.host_valid,.host_time_bcd,.load_total,.loaded_total,
         .wall_valid,.wall_time_bcd,.session_seconds,.total_seconds);
     wire stats_address=RTC_PERSISTENCE ? bridge_addr>=32'h10000100 && bridge_addr<32'h10000130 : bridge_addr[31:5]==27'h0800008;
+    wire [31:0] stats_load_data,stats_addr;
+    wire stats_load,stats_export;
+`ifdef GBK_GAMEPAK_SAVE
+    // A fixed filename loads before the game code can be read from the slot.
+    // Buffer that file, then replay it through the existing identity/parser
+    // after the ROM CRC has passed. File format and SD ROM handling are shared.
+    wire cart_stats_address=bridge_addr>=32'h10000140 && bridge_addr<32'h10000170;
+`ifdef GBK_GAMEPAK_STATS_FILE
+    assign stats_load=bridge_wr && (gamepak_mode ?
+        (cart_stats_address && gamepak_stats_accept) : stats_address);
+    assign stats_load_data=load_data;
+    assign stats_addr=bridge_addr;
+`else
+    (* ramstyle="M10K" *) reg [31:0] cart_stats[0:15];
+    reg [31:0] replay_data;
+    reg [3:0] replay_word=0,received_words=0;
+    reg replay=0,replay_valid=0,replay_done=0;
+    assign gamepak_stats_done=replay_done;
+    always @(posedge clk)begin
+        if(bridge_wr && cart_stats_address && bridge_addr[5:2]<12 && !replay && !replay_done)begin
+            cart_stats[bridge_addr[5:2]]<=load_data;
+            if(bridge_addr[5:2]==0)received_words<=1;
+            else if(bridge_addr[5:2]==received_words)received_words<=received_words+1'b1;
+            else received_words<=0;
+        end
+        replay_valid<=replay;
+        if(gamepak_begin)begin replay<=0;replay_valid<=0;replay_done<=0;replay_word<=0;end
+        else if(gamepak_stats_start)begin
+            replay<=received_words==12;
+            replay_done<=received_words!=12;
+            received_words<=0;
+        end else if(replay)begin
+            replay_data<=cart_stats[replay_word];
+            replay_word<=replay_word+1'b1;
+            if(replay_word==11)replay<=0;
+        end else if(replay_valid)replay_done<=1;
+    end
+    assign stats_load=gamepak_mode ? replay_valid : (bridge_wr && stats_address);
+    assign stats_load_data=gamepak_mode ? replay_data : load_data;
+    assign stats_addr=gamepak_mode && replay_valid ? {26'd0,replay_word-4'd1,2'b00} : bridge_addr;
+`endif
+    assign stats_export=request_read && (gamepak_mode ? request_id==4 : request_id==3);
+    wire stats_read_address=gamepak_mode ? cart_stats_address : stats_address;
+`else
+    assign stats_load=bridge_wr && stats_address;
+    assign stats_load_data=load_data;
+    assign stats_addr=bridge_addr;
+    assign stats_export=request_read && request_id==3;
+    wire stats_read_address=stats_address;
+`endif
     wire load_rtc,snapshot_ready,export_busy;
     wire [97:0] loaded_rtc,rtc_snapshot;
     wire [31:0] loaded_word;
@@ -79,7 +157,7 @@ module gba_playtime_host #(parameter integer CLOCK_HZ=74250000, parameter RTC_PE
             .state_ready(state_rtc_ready),.state_busy(state_rtc_busy),.state_done(state_rtc_done),.state_error(state_rtc_error),
 `endif
             .host_valid,.host_date(host_date_bcd),.host_time(host_time_bcd),.host_epoch,
-            .export_request(request_read && request_id==3 && !export_locked && !export_busy),.allcomplete,
+            .export_request(stats_export && !export_locked && !export_busy),.allcomplete,
             .acknowledge(rtc_acknowledge),.reply(rtc_reply),.request_toggle(rtc_request),
             .operation(rtc_operation),.payload(rtc_payload),.snapshot_ready,.snapshot(rtc_snapshot),.boot_ready(rtc_boot_ready));
     end else begin
@@ -91,14 +169,14 @@ module gba_playtime_host #(parameter integer CLOCK_HZ=74250000, parameter RTC_PE
         assign load_word_read=0;assign load_word_index=0;
     end endgenerate
     gba_playtime_record #(.RTC_PERSISTENCE(RTC_PERSISTENCE)) stats(.clk,.new_game,.playing,.game_id,.total_seconds,
-        .load_write(bridge_wr && stats_address),.load_index(bridge_addr[(RTC_PERSISTENCE?5:4):2]),.load_data,
-        .export_request(request_read && request_id==3),.allcomplete,
-        .read_strobe(bridge_rd && stats_address),.read_index(bridge_addr[(RTC_PERSISTENCE?5:4):2]),
+        .load_write(stats_load),.load_index(stats_addr[(RTC_PERSISTENCE?5:4):2]),.load_data(stats_load_data),
+        .export_request(stats_export),.allcomplete,
+        .read_strobe(bridge_rd && stats_read_address),.read_index(bridge_addr[(RTC_PERSISTENCE?5:4):2]),
         .snapshot_ready,.rtc_snapshot,.load_rtc,.loaded_rtc,.export_busy,
-        .identity_write(cart_write && bridge_addr[24:4]==21'h00000a),.identity_ready(&header_seen),
-        .identity_index(bridge_addr[3:2]),.identity_data(load_data),.load_word_read,.load_word_index,.loaded_word,
+        .identity_write,.identity_ready(&header_seen),
+        .identity_index,.identity_data,.load_word_read,.load_word_index,.loaded_word,
         .endian_little,.export_locked,.load_total,.loaded_total,.read_data(stats_rdata),.import_valid());
-    assign stats_ack=request_read && request_id==3 && export_locked;
+    assign stats_ack=stats_export && export_locked;
     reg [31:0] settings_rdata=0;
     always @(posedge clk)begin
         if(bridge_rd)begin
@@ -114,7 +192,7 @@ module gba_playtime_host #(parameter integer CLOCK_HZ=74250000, parameter RTC_PE
     // Address mux remains stable until the following APF transaction, while
     // each selected endpoint retains the response from its read strobe.
     reg stats_selected=0;
-    always @(posedge clk)if(bridge_rd)stats_selected<=stats_address;
+    always @(posedge clk)if(bridge_rd)stats_selected<=stats_read_address;
     assign bridge_rdata=stats_selected ? stats_rdata : endian_little ?
         {settings_rdata[7:0],settings_rdata[15:8],settings_rdata[23:16],settings_rdata[31:24]} : settings_rdata;
 

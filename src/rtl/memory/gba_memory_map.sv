@@ -26,10 +26,16 @@ module gba_memory_map #(
     input wire state_cpu_lookup_idle,
     input wire [15:0] state_reg_addr,
     input wire [31:0] state_reg_wdata,
+`ifdef GBK_STATE_SERIAL
+    input wire [1:0] state_reg_shift,
+`endif
     output wire state_dma_quiescent,state_transactions_idle,
     output reg state_reg_valid,
     output reg [31:0] state_reg_rdata,
     input wire state_save_raw_access,state_save_raw_eeprom,
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+    input wire cart_eeprom_import,
+`endif
     output wire state_save_raw_idle,state_save_raw_done,
 `endif
     input wire stopped,postflg,
@@ -61,11 +67,18 @@ module gba_memory_map #(
     input wire save_sram, save_flash512,
     input wire save_eeprom, cart_large,
     output wire save_eeprom_large,
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    output wire [1:0] save_eeprom_width,  // {6-bit seen, 14-bit seen} from the game
+    output wire save_eeprom_commit,       // toggles once per committed game write
+`endif
     input  logic [14:0] save_load_addr,
     input  logic [31:0] save_load_wdata,
     output wire [31:0] save_load_rdata,
     input wire save_export_lock,
     output wire save_export_locked,
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    output wire guest_save_written,
+`endif
     input wire save_load_read,
     output wire save_load_valid, save_boot_ready, save_fault,
     output wire [16:0] save_mem_a,
@@ -80,6 +93,12 @@ module gba_memory_map #(
     output logic        ready,
     output logic        cart_req,
     output logic [31:0] cart_addr,
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    input wire native_cart,
+    output logic cart_write,
+    output logic [1:0] cart_size,
+    output logic [31:0] cart_wdata,
+`endif
     output logic        cart_streaming,
     input  logic [31:0] cart_rdata,
     input  logic        cart_ready,
@@ -260,12 +279,20 @@ module gba_memory_map #(
         (ewram_port_busy && !ewram_owner_dma && !ewram_write && ewram_ready));
     wire [31:0] ewram_cpu_fast_data=ewram_cpu_response_valid ? ewram_response_data : ewram_rdata;
 `ifdef GBK_POCKET
-    assign rdata=iwram_cache_hit ? iwram_cache_data[iwram_cache_index] :
+    assign rdata=
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        native_cpu_response_valid ? native_cpu_response_data :
+`endif
+        iwram_cache_hit ? iwram_cache_data[iwram_cache_index] :
         eeprom_cpu_read ? eeprom_word :
         cart_cpu_fast_ready ? cart_cpu_fast_data :
         ewram_cpu_fast_ready ? ewram_cpu_fast_data : response_rdata;
 `else
-    assign rdata=eeprom_cpu_read ? eeprom_word : cart_cpu_fast_ready ? cart_cpu_fast_data :
+    assign rdata=
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        native_cpu_response_valid ? native_cpu_response_data :
+`endif
+        eeprom_cpu_read ? eeprom_word : cart_cpu_fast_ready ? cart_cpu_fast_data :
         ewram_cpu_fast_ready ? ewram_cpu_fast_data : response_rdata;
 `endif
     logic [3:0]  read_state;
@@ -313,9 +340,18 @@ module gba_memory_map #(
     logic [31:0] ewram_response_data;
     logic cart_port_busy, cart_owner_dma;
     logic cart_cpu_response_valid, cart_dma_response_valid;
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    wire native_cpu_access=native_cart && addr[31:27]==5'd1;
+    wire native_dma_access=native_cart && dma_addr[31:27]==5'd1;
+    reg native_cpu_response_valid;
+    reg [31:0] native_cpu_response_data;
+`endif
 `ifdef GBK_SAVESTATE
     assign state_transactions_idle=read_state==0 && !cart_port_busy && !ewram_port_busy &&
         !cart_cpu_response_valid && !cart_dma_response_valid &&
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        !native_cpu_response_valid &&
+`endif
         !ewram_cpu_response_valid && !ewram_dma_response_valid && !dma_active;
 `endif
     logic [31:0] cart_response_data;
@@ -543,7 +579,11 @@ module gba_memory_map #(
         eeprom_sync<={eeprom_sync[0],save_eeprom===1'b1};
         large_rom_sync<={large_rom_sync[0],cart_large===1'b1};
     end
-    wire eeprom_selected=EEPROM && eeprom_sync[1];
+    wire eeprom_selected=EEPROM && eeprom_sync[1]
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        && !native_cart
+`endif
+        ;
     function automatic eeprom_address(input [31:0] a);
         eeprom_address=a[31:24]==8'h0d && (!large_rom_sync[1] || a[23:8]==16'hffff);
     endfunction
@@ -554,6 +594,9 @@ module gba_memory_map #(
     wire gpio_read_enable,cartridge_irq;
     wire [31:0] gpio_rdata;
     wire hit_gpio=rtc_enable_sync[1] && addr[31:25]>=7'h04 && addr[31:25]<=7'h06 &&
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        !native_cart &&
+`endif
         (addr[24:2]==23'h31 || addr[24:2]==23'h32) && (write || gpio_read_enable);
     gba_cartridge_rtc #(.RTC_PERSISTENCE(RTC_PERSISTENCE),.CLOCK_HZ(FAST_CPU ? 39936000 : 12288000)) rtc(
 `ifdef GBK_SAVESTATE
@@ -567,8 +610,16 @@ module gba_memory_map #(
         .persistence_acknowledge(rtc_persistence_acknowledge),.persistence_reply(rtc_persistence_reply),
         .bus_write(req && write && hit_gpio && !dma_active),.addr(read_state==14 ? pending_addr : addr),
         .wdata,.size,.rdata(gpio_rdata),.read_enable(gpio_read_enable),.irq(cartridge_irq));
-    wire hit_cart  = (addr[31:24] >= 8'h08) && (addr[31:24] <= 8'h0D) && !hit_eeprom && !hit_gpio;
-    wire hit_flash = (addr[31:24] == 8'h0e) || (addr[31:24] == 8'h0f);
+    wire hit_cart  = (addr[31:24] >= 8'h08) && (addr[31:24] <= 8'h0D) && !hit_eeprom && !hit_gpio
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        && !native_cart
+`endif
+        ;
+    wire hit_flash = ((addr[31:24] == 8'h0e) || (addr[31:24] == 8'h0f))
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        && !native_cart
+`endif
+        ;
     wire [31:0] flash_rdata;
     wire flash_ready;
     wire [31:0] flash_load_rdata,eeprom_load_rdata;
@@ -602,7 +653,13 @@ module gba_memory_map #(
 `ifdef GBK_SAVESTATE
             .state_hold,.state_write(state_reg_write && state_reg_addr>=16'h0910 && state_reg_addr<=16'h0913),
             .state_addr(state_reg_addr[1:0]),.state_wdata(state_reg_wdata),.state_valid(state_eeprom_valid),.state_rdata(state_eeprom_rdata),
-            .state_host_access(state_raw_active),.state_host_idle(state_eeprom_host_idle),.state_host_done(state_eeprom_host_done),
+            // Cartridge import uses the raw EEPROM port exclusively. Like
+            // an ordinary save import it establishes capacity from addresses.
+            .state_host_access(state_raw_active
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+                && cart_eeprom_import!==1'b1
+`endif
+                ),.state_host_idle(state_eeprom_host_idle),.state_host_done(state_eeprom_host_done),
 `endif
             .clk,.reset,.access(eeprom_access),.write(dma_active ? dma_write : write),
             .bit_in(dma_active ? dma_wdata[0] : wdata[0]),
@@ -618,6 +675,9 @@ module gba_memory_map #(
 `endif
             .load_addr(save_load_addr),.load_wdata(save_load_wdata),.load_rdata(eeprom_load_rdata),.load_valid(eeprom_load_valid),
             .export_lock(save_export_lock),.export_locked(eeprom_export_locked),.capacity_large(save_eeprom_large)
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+            ,.game_width(save_eeprom_width),.commit_toggle(save_eeprom_commit)
+`endif
         );
     end else begin : no_serial_save
 `ifdef GBK_SAVESTATE
@@ -627,6 +687,9 @@ module gba_memory_map #(
         assign eeprom_bit=1;assign eeprom_ready=1;
         assign eeprom_load_rdata=32'hffffffff;assign eeprom_load_valid=0;
         assign eeprom_export_locked=0;assign save_eeprom_large=0;
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+        assign save_eeprom_width=0;assign save_eeprom_commit=0;
+`endif
     end endgenerate
     generate if(EXTERNAL_SAVE) begin : external_save
     gba_flash_sram flash (
@@ -643,6 +706,9 @@ module gba_memory_map #(
         .load_read(save_load_read && !(EEPROM && save_eeprom===1'b1)),
 `endif
         .load_valid(flash_load_valid),.boot_ready(save_boot_ready),.fault(save_fault),
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+        .guest_save_written,
+`endif
         .sram_a(save_mem_a),.sram_dq(save_mem_dq),.sram_oe_n(save_mem_oe_n),
         .sram_we_n(save_mem_we_n),.sram_ub_n(save_mem_ub_n),.sram_lb_n(save_mem_lb_n),
         .load_clk(bios_load_clk), .load_reset(bios_load_reset), .load_write(save_load_write === 1'b1
@@ -654,6 +720,9 @@ module gba_memory_map #(
         .load_rdata(flash_load_rdata), .export_lock(save_export_lock), .export_locked(flash_export_locked)
     );
     end else begin : internal_save
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+        assign guest_save_written=1'b0;
+`endif
         assign save_boot_ready=1'b1;
         assign save_fault=1'b0;
         assign flash_load_valid=1'b0;
@@ -886,6 +955,9 @@ module gba_memory_map #(
 `ifdef GBK_SAVESTATE
         .state_prepare(state_dma_request),.state_hold(state_hold),
         .state_write(state_reg_write && state_reg_addr[15:8]==8 && state_reg_addr[7:0]<10),
+`ifdef GBK_STATE_SERIAL
+        .state_shift(state_reg_shift[0] && state_reg_addr[15:8]==8 && state_reg_addr[7:0]<10),.state_restore(state_reg_shift[1]),
+`endif
         .state_addr(state_reg_addr[3:0]),.state_wdata(state_reg_wdata),.state_valid(state_serial_valid),.state_rdata(state_serial_rdata),
 `endif
         .access(display_io_write || (read_state==1 && pending_addr[31:16]==16'h0400)),
@@ -898,6 +970,9 @@ module gba_memory_map #(
     gba_apu #(.CYCLE_ENABLE(1)) apu(.clk,.reset,.cycle_enable(peripheral_tick),.timer_overflow(timer_overflow[1:0]),
 `ifdef GBK_SAVESTATE
         .state_hold,.state_write(state_reg_write && state_reg_addr[15:8]==7 && state_reg_addr[7:0]<64),
+`ifdef GBK_STATE_SERIAL
+        .state_shift(state_reg_shift[0] && state_reg_addr[15:8]==7 && state_reg_addr[7:0]<64),.state_restore(state_reg_shift[1]),
+`endif
         .state_addr(state_reg_addr[5:0]),.state_wdata(state_reg_wdata),.state_valid(state_apu_valid),.state_rdata(state_apu_rdata),
 `endif
         .bus_write(display_io_write),.addr(display_io_addr),.wdata(display_io_data),
@@ -956,6 +1031,9 @@ module gba_memory_map #(
     // 0=idle, 1=internal RAM read, 2=cartridge read, 3=data ready,
     // 4=external EWRAM read, 5/6=registered internal RAM read.
     assign ready = !dma_active && (
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+                   native_cpu_access ? (req && native_cpu_response_valid) :
+`endif
                    cart_cpu_fast_ready || ewram_cpu_fast_ready ||
 `ifdef GBK_POCKET
                    iwram_cache_hit ||
@@ -978,7 +1056,15 @@ module gba_memory_map #(
             cart_response_data <= 0;
             cart_addr <= 0;
             cart_streaming <= 0;
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+            cart_write<=0;cart_size<=0;cart_wdata<=0;
+            native_cpu_response_valid<=0;native_cpu_response_data<=0;
+`endif
         end else begin
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+            if(!native_cart || (!dma_active && native_cpu_access && req && native_cpu_response_valid))
+                native_cpu_response_valid<=0;
+`endif
             if (dma_active || (cart_cpu_response_valid && read_state == 4'd2))
                 cart_cpu_response_valid <= 0;
             if (cart_dma_response_valid && dma_req)
@@ -987,8 +1073,29 @@ module gba_memory_map #(
                 cart_port_busy <= 0;
                 cart_response_data <= cart_rdata;
                 if (cart_owner_dma) cart_dma_response_valid <= 1;
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+                else if(native_cart)begin
+                    // Side-effecting reads and all stores must retire once,
+                    // even if DMA starts while the physical bus is busy.
+                    native_cpu_response_valid<=1;
+                    native_cpu_response_data<=cart_rdata;
+                end
+`endif
                 else if (!dma_active && !cart_cpu_fast_ready) cart_cpu_response_valid <= 1;
             end else if (!cart_port_busy && !cart_cpu_response_valid && !cart_dma_response_valid) begin
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+                if(native_cart)begin
+                    if(dma_active && dma_req && native_dma_access)begin
+                        cart_port_busy<=1;cart_owner_dma<=1;
+                        cart_addr<={5'd0,dma_addr[26:0]};cart_write<=dma_write;
+                        cart_size<=dma_size;cart_wdata<=dma_wdata;cart_streaming<=0;
+                    end else if(!dma_active && req && native_cpu_access && !native_cpu_response_valid)begin
+                        cart_port_busy<=1;cart_owner_dma<=0;
+                        cart_addr<={5'd0,addr[26:0]};cart_write<=write;
+                        cart_size<=size;cart_wdata<=wdata;cart_streaming<=0;
+                    end
+                end else
+`endif
                 if (dma_active && dma_req && !dma_write &&
                     dma_addr[31:24] >= 8'h08 && dma_addr[31:24] <= 8'h0d && !dma_hit_eeprom) begin
                     cart_port_busy <= 1;
@@ -1245,6 +1352,9 @@ module gba_memory_map #(
         if (!dma_write && dma_addr[31:24] >= 8'h08 && dma_addr[31:24] <= 8'h0d)
             dma_ready_signal = dma_req && cart_dma_response_valid;
         if(dma_hit_eeprom) dma_ready_signal=dma_req && eeprom_ready;
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        if(native_dma_access)dma_ready_signal=dma_req && cart_dma_response_valid;
+`endif
         if (EXTERNAL_EWRAM && dma_addr[31:24] == 8'h02)
             dma_ready_signal = dma_req && ewram_dma_response_valid;
         if (RENDER_SCHEDULER && dma_addr[31:24] == 8'h06 && !dma_write)
@@ -1316,6 +1426,9 @@ module gba_memory_map #(
     gba_timers #(.CYCLE_ENABLE(1)) timers (
 `ifdef GBK_SAVESTATE
         .state_hold,.state_write(state_reg_write && state_reg_addr[15:8]==3 && state_reg_addr[7:0]<9),
+`ifdef GBK_STATE_SERIAL
+        .state_shift(state_reg_shift[0] && state_reg_addr[15:8]==3 && state_reg_addr[7:0]<9),.state_restore(state_reg_shift[1]),
+`endif
         .state_addr(state_reg_addr[3:0]),.state_wdata(state_reg_wdata),
         .state_valid(state_timer_valid),.state_rdata(state_timer_rdata),
 `endif
@@ -1359,6 +1472,9 @@ module gba_memory_map #(
         .state_request(state_dma_request),.state_hold,
         .state_write(state_reg_write && state_reg_addr[15:8]==2 && state_reg_addr[7:0]<34),
         .state_addr(state_reg_addr[5:0]),.state_wdata(state_reg_wdata),.state_quiescent(state_dma_quiescent),
+`ifdef GBK_STATE_SERIAL
+        .state_shift(state_reg_shift[0] && state_reg_addr[15:8]==2 && state_reg_addr[7:0]<34),.state_restore(state_reg_shift[1]),
+`endif
         .state_valid(state_dma_valid),.state_rdata(state_dma_rdata),
 `endif
         .cpu_lock((cpu_bus_lock===1'b1) || guest_stopped),
@@ -1423,7 +1539,11 @@ module gba_memory_map #(
     logic [31:0] dma_full_word;
     always_comb begin
         dma_full_word = 32'b0;
-        if (dma_addr[31:24] >= 8'h08 && dma_addr[31:24] <= 8'h0d)
+        if ((dma_addr[31:24] >= 8'h08 && dma_addr[31:24] <= 8'h0d)
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+            || native_dma_access
+`endif
+            )
             dma_full_word = cart_response_data;
         if (dma_addr[31:24] == 8'h02)
             dma_full_word = EXTERNAL_EWRAM ? ewram_response_data : ewram[dma_addr[17:2]];
@@ -1628,7 +1748,11 @@ module gba_memory_map #(
             end
             else if (!BLOCK_OAM && hit_oam && addr[9:2] < OAM_WORDS)
                 oam[addr[9:2]] <= merge_store(oam[addr[9:2]], wdata, size, addr[1:0]);
-        end else if (req) begin
+        end else if (req
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+            && !native_cpu_access
+`endif
+            ) begin
             pending_addr <= addr;
             if(hit_gpio)read_state<=4'd14;
             else if (hit_eeprom) read_state <= 4'd13;

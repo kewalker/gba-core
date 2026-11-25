@@ -4,6 +4,10 @@ module gba_apu #(parameter bit CYCLE_ENABLE=0) (
     input wire clk, reset,
 `ifdef GBK_SAVESTATE
     input wire state_hold,state_write,
+`ifdef GBK_STATE_SERIAL
+    // Words 0-3 here and PSG words 8-19 (state 40-51) are LSB-first rings.
+    input wire state_shift,state_restore,
+`endif
     input wire [5:0] state_addr,
     input wire [31:0] state_wdata,
     output reg state_valid,
@@ -44,16 +48,27 @@ module gba_apu #(parameter bit CYCLE_ENABLE=0) (
         state_valid=!reset && state_frozen && (state_addr<4 ||
             (state_addr<20 && fifo_state_ready && last_state_addr==state_addr));state_rdata=0;
         if(state_valid)case(state_addr)
+`ifdef GBK_STATE_SERIAL
+            0:state_rdata={31'd0,soundcnt_l[0]};
+            1:state_rdata={31'd0,master_enable};
+            2:state_rdata={31'd0,read_ptr[0][0]};
+            3:state_rdata={31'd0,read_ptr[1][0]};
+`else
             0:state_rdata={soundcnt_h,soundcnt_l};
             1:state_rdata={31'd0,master_enable};
             2:state_rdata={8'd0,sample[0],level[0],write_ptr[0],read_ptr[0]};
             3:state_rdata={8'd0,sample[1],level[1],write_ptr[1],read_ptr[1]};
+`endif
             default:state_rdata=state_addr<12 ? state_fifo_data[0] : state_fifo_data[1];
         endcase
         else if(!reset && state_frozen && state_addr==63)begin
             state_valid=1;state_rdata={31'd0,(&fifo_warm) && resume_warm_count==3};
         end else if(state_frozen && state_addr>=32)begin state_valid=state_psg_valid;state_rdata=state_psg_rdata;end
     end
+`ifdef GBK_STATE_SERIAL
+    wire state_ring=state_frozen && state_shift && state_addr<4;
+    wire state_in=state_restore ? state_wdata[0] : state_rdata[0];
+`endif
 `endif
     wire [31:0] mask = size==0 ? 32'hff << (addr[1:0]*8) :
         size==1 ? 32'hffff << (addr[1]*16) : 32'hffffffff;
@@ -76,6 +91,9 @@ module gba_apu #(parameter bit CYCLE_ENABLE=0) (
     gba_psg psg(.clk,.reset,.cycle_enable(!CYCLE_ENABLE || cycle_enable),
 `ifdef GBK_SAVESTATE
         .state_hold,.state_write(state_write && state_addr>=32),.state_addr(state_addr[4:0]),.state_wdata,
+`ifdef GBK_STATE_SERIAL
+        .state_shift(state_shift && state_addr>=32),.state_restore,
+`endif
         .state_valid(state_psg_valid),.state_rdata(state_psg_rdata),
 `endif
         .master_enable,.power_off(disable_write),.bus_write,.addr,.bits_in,.mask,
@@ -157,10 +175,15 @@ module gba_apu #(parameter bit CYCLE_ENABLE=0) (
                 read_ptr[c]<=0;write_ptr[c]<=0;level[c]<=0;sample[c]<=0;
 `ifdef GBK_SAVESTATE
             end else if(state_frozen)begin
+`ifdef GBK_STATE_SERIAL
+                if(state_ring && state_addr==2+c)
+                    {sample[c],level[c],write_ptr[c],read_ptr[c]}<={state_in,sample[c],level[c],write_ptr[c],read_ptr[c][4:1]};
+`else
                 if(state_write && state_addr==2+c)begin
                     read_ptr[c]<=state_wdata[4:0];write_ptr[c]<=state_wdata[9:5];
                     level[c]<=state_wdata[15:10];sample[c]<=state_wdata[23:16];
                 end
+`endif
 `endif
             end else begin
                 if(push) begin
@@ -178,8 +201,14 @@ module gba_apu #(parameter bit CYCLE_ENABLE=0) (
         if(reset) begin soundcnt_l<=0;soundcnt_h<=0;master_enable<=0;end
 `ifdef GBK_SAVESTATE
         else if(state_frozen)begin
+`ifdef GBK_STATE_SERIAL
+            // A captured image already obeys the register masks.
+            if(state_ring && state_addr==0){soundcnt_h,soundcnt_l}<={state_in,soundcnt_h,soundcnt_l[15:1]};
+            if(state_ring && state_addr==1)master_enable<=state_in;
+`else
             if(state_write && state_addr==0)begin soundcnt_l<=state_wdata[15:0] & 16'hff77;soundcnt_h<=state_wdata[31:16] & 16'h770f;end
             if(state_write && state_addr==1)master_enable<=state_wdata[0];
+`endif
         end
 `endif
         else begin

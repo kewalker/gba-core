@@ -248,7 +248,8 @@ module gba_save_type (
     input wire [31:0] load_wdata,
     output reg save_sram = 0,
     output reg save_eeprom = 0,
-    output reg save_flash512 = 0
+    output reg save_flash512 = 0,
+    output reg save_flash1m = 0
 );
     reg [6:0] matched = 0;
     reg [22:0] next_addr = 0;
@@ -274,8 +275,10 @@ module gba_save_type (
     wire [7:0] step2=advance(step1[6:0],load_wdata[23:16]);
     wire [7:0] step3=advance(step2[6:0],load_wdata[31:24]);
     wire found=step0[7] || step1[7] || step2[7] || step3[7];
-    reg [8:0] flash_matched=0;
-    function automatic [9:0] advance_flash(input [8:0] previous,input [7:0] value);
+    // FLASH_V and FLASH512_V mark 64 KiB Flash; FLASH1M_V marks 128 KiB.
+    // Bits 0-8 and 10-12 are partial matches; 9 and 13 complete a string.
+    reg [12:0] flash_matched=0;
+    function automatic [13:0] advance_flash(input [12:0] previous,input [7:0] value);
         begin
             advance_flash[0]=value==8'h46; // F
             advance_flash[1]=previous[0] && value==8'h4c;
@@ -287,18 +290,25 @@ module gba_save_type (
             advance_flash[7]=previous[6] && value==8'h32;
             advance_flash[8]=(previous[4] || previous[7]) && value==8'h5f;
             advance_flash[9]=previous[8] && value==8'h56;
+            advance_flash[10]=previous[4] && value==8'h31; // 1
+            advance_flash[11]=previous[10] && value==8'h4d; // M
+            advance_flash[12]=previous[11] && value==8'h5f; // _
+            advance_flash[13]=previous[12] && value==8'h56; // V
         end
     endfunction
-    wire [9:0] fl0=advance_flash(consecutive ? flash_matched : 9'd0,load_wdata[7:0]);
-    wire [9:0] fl1=advance_flash(fl0[8:0],load_wdata[15:8]);
-    wire [9:0] fl2=advance_flash(fl1[8:0],load_wdata[23:16]);
-    wire [9:0] fl3=advance_flash(fl2[8:0],load_wdata[31:24]);
+    wire [13:0] fl0=advance_flash(consecutive ? flash_matched : 13'd0,load_wdata[7:0]);
+    wire [13:0] fl1=advance_flash({fl0[12:10],1'b0,fl0[8:0]},load_wdata[15:8]);
+    wire [13:0] fl2=advance_flash({fl1[12:10],1'b0,fl1[8:0]},load_wdata[23:16]);
+    wire [13:0] fl3=advance_flash({fl2[12:10],1'b0,fl2[8:0]},load_wdata[31:24]);
     always @(posedge clk) begin
         if(reset) flash_matched<=0;
         else if(load_write) begin
-            flash_matched<=fl3[8:0];
-            if(load_addr==0) save_flash512<=0;
-            else if(fl0[9] || fl1[9] || fl2[9] || fl3[9]) save_flash512<=1;
+            flash_matched<={fl3[12:10],1'b0,fl3[8:0]};
+            if(load_addr==0) begin save_flash512<=0;save_flash1m<=0;end
+            else begin
+                if(fl0[9] || fl1[9] || fl2[9] || fl3[9]) save_flash512<=1;
+                if(fl0[13] || fl1[13] || fl2[13] || fl3[13]) save_flash1m<=1;
+            end
         end
     end
     reg [6:0] eeprom_matched=0;

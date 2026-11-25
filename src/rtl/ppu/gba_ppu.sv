@@ -13,6 +13,9 @@ module gba_ppu #(
 `endif
     input  logic clk,
     input  logic reset,
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+    input  logic raster_reset,
+`endif
     input  logic pixel_ce,
     input  logic render_clk,
     input  logic [15:0] dispcnt,
@@ -121,6 +124,9 @@ module gba_ppu #(
     localparam int V_BACK = NATIVE_TIMING ? 58 : 468;
     localparam int TOTAL_W = ACTIVE_W + H_FRONT + H_SYNC + H_BACK;
     localparam int TOTAL_H = ACTIVE_H + V_FRONT + V_SYNC + V_BACK;
+`ifndef GBK_GAMEPAK_BOOT_SCANOUT
+    wire raster_reset=reset;
+`endif
 
     // 128/375 * 12.288 MHz is exactly the 4.194304 MHz GBA dot rate.
     // APF ignores held pixels via video_skip; RGB and sync share one enable.
@@ -128,7 +134,7 @@ module gba_ppu #(
     wire video_advance = !NATIVE_TIMING || video_phase >= 9'd247;
     assign video_skip = NATIVE_TIMING && !video_advance;
     always_ff @(posedge clk) begin
-        if (reset) video_phase <= 0;
+        if (raster_reset) video_phase <= 0;
         else if (NATIVE_TIMING)
             video_phase <= video_advance ? video_phase - 9'd247 : video_phase + 9'd128;
     end
@@ -142,9 +148,9 @@ module gba_ppu #(
     // A render-clock lookup would launch a complete affine address calculation
     // every 7.5 ns although its inputs only change at the held video dot rate.
     wire raster_step=video_advance && (!FAST_RENDER || pixel_ce);
-    wire [9:0] next_mosaic_x=reset ? 10'd0 : raster_step ?
+    wire [9:0] next_mosaic_x=raster_reset ? 10'd0 : raster_step ?
         (x==TOTAL_W-1 ? 10'd0 : 10'(x)+1'b1) : 10'(x);
-    wire [9:0] next_mosaic_y=reset ? 10'd0 : raster_step && x==TOTAL_W-1 ?
+    wire [9:0] next_mosaic_y=raster_reset ? 10'd0 : raster_step && x==TOTAL_W-1 ?
         (y==TOTAL_H-1 ? 10'd0 : 10'(y)+1'b1) : 10'(y);
     gba_mosaic_coordinate #(.COORD_BITS($clog2(TOTAL_W))) mosaic_horizontal(.clk(clk),.coordinate(next_mosaic_x),.size(mosaic[3:0]),.snapped(mosaic_x));
     gba_mosaic_coordinate #(.COORD_BITS($clog2(TOTAL_H))) mosaic_vertical(.clk(clk),.coordinate(next_mosaic_y),.size(mosaic[7:4]),.snapped(mosaic_y),.remainder_value(mosaic_line_remainder));
@@ -1116,20 +1122,21 @@ module gba_ppu #(
         bitmap_index = (mode == 5) ? (((bg2cnt[6] ? mosaic_y : 10'(y)) * 160) + (bg2cnt[6] ? mosaic_x : {1'b0,x})) : pixel_index;
         bitmap_visible = (mode == 3 || mode == 4) || (mode == 5 && x < 160 && y < 128);
         pixel = {1'b0,effected_color};
-        if(dispcnt[7]) pixel=16'h7fff;
+        if(dispcnt[7]
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+            || (reset && !raster_reset)
+`endif
+        ) pixel=16'h7fff;
         r=de ? {pixel[4:0],4'b0} : 9'd0;
         g=de ? {pixel[9:5],4'b0} : 9'd0;
         b=de ? {pixel[14:10],4'b0} : 9'd0;
     end
 
     always_ff @(posedge clk) begin
-        if (reset) begin
+        if (raster_reset) begin
             x <= 0;
             y <= 0;
-            pixel_reg <= 0;
-        end else if (video_advance && (!FAST_RENDER || pixel_ce)) begin
-            if (x < ACTIVE_W && y < ACTIVE_H && bitmap_visible)
-                pixel_reg <= framebuffer_pixel;
+        end else if (raster_step) begin
             if (x == TOTAL_W-1) begin
                 x <= 0;
                 if (y == TOTAL_H-1)
@@ -1140,6 +1147,11 @@ module gba_ppu #(
                 x <= x + 1'b1;
             end
         end
+    end
+    always_ff @(posedge clk) begin
+        if(reset)pixel_reg<=0;
+        else if(raster_step && x<ACTIVE_W && y<ACTIVE_H && bitmap_visible)
+            pixel_reg<=framebuffer_pixel;
     end
 endmodule
 

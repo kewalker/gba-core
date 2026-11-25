@@ -4,6 +4,11 @@ module gba_psg (
     input wire clk, reset, cycle_enable, master_enable, power_off,
 `ifdef GBK_SAVESTATE
     input wire state_hold,state_write,
+`ifdef GBK_STATE_SERIAL
+    // Words 8-19 are LSB-first rings: state_shift rotates the addressed word
+    // one bit, taking state_wdata[0] on restore and its own bit 0 otherwise.
+    input wire state_shift,state_restore,
+`endif
     input wire [4:0] state_addr,
     input wire [31:0] state_wdata,
     output wire state_valid,
@@ -75,6 +80,22 @@ module gba_psg (
     wire [22:0] noise_reload_state;
     wire [14:0] noise_lfsr_state;
     wire [21:0] sweep_state;
+`ifdef GBK_STATE_SERIAL
+    wire [3:0] state_channel=4'(state_addr-9)>>1;
+    wire state_ring_bit=state_addr==8 ? divider[0] :
+        state_addr<17 ? (state_addr[0] ? channel_state[state_channel[1:0]][0] : period_state[state_channel[1:0]][0]) :
+        state_addr==17 ? noise_reload_state[0] : state_addr==18 ? noise_lfsr_state[0] : sweep_state[0];
+    wire state_ring=state_frozen && state_shift && state_addr>=8 && state_addr<20;
+    wire state_in=state_restore ? state_wdata[0] : state_ring_bit;
+    always @*begin
+        state_rdata=0;
+        if(state_valid)begin
+            if(state_addr<8)state_rdata=shared_register_read;
+            else if(state_addr<20)state_rdata={31'd0,state_ring_bit};
+            else state_rdata=cpu_wave_word;
+        end
+    end
+`else
     always @*begin
         state_rdata=0;
         if(state_valid)begin
@@ -87,6 +108,7 @@ module gba_psg (
             endcase
         end
     end
+`endif
 `else
     wire [2:0] cpu_wave_index={!wave_bank,addr[3:2]};
 `endif
@@ -169,7 +191,17 @@ module gba_psg (
         end else begin
 `ifdef GBK_SAVESTATE
             if(state_frozen)begin
+`ifdef GBK_STATE_SERIAL
+                // Word 8, bits 0-23: divider, frame count, frame step, then
+                // the wave position held by channel 3.
+                if(state_ring && state_addr==8)begin
+                    divider<={frame_count[0],divider[1]};
+                    frame_count<={frame_step[0],frame_count[12:1]};
+                    frame_step<={wave_position[0],frame_step[2:1]};
+                end
+`else
                 if(state_write && state_addr==8)begin divider<=state_wdata[1:0];frame_count<=state_wdata[14:2];frame_step<=state_wdata[17:15];end
+`endif
             end else begin
 `endif
             if(cycle_enable) divider<=divider+1'b1;
@@ -287,6 +319,30 @@ module gba_psg (
                 if(c==2) wave_position<=0;
 `ifdef GBK_SAVESTATE
             end else if(state_frozen)begin
+`ifdef GBK_STATE_SERIAL
+                // Rings in the parallel layout's bit order (LSB first).
+                if(state_ring)begin
+                    if(state_addr==9+c*2)begin
+                        enabled<=length_count[0];
+                        if(c==2)length_count<={state_in,length_count[8:1]};
+                        else begin
+                            length_count<={volume[0],length_count[8:1]};
+                            volume<={envelope_count[0],volume[3:1]};
+                            envelope_count<={phase[0],envelope_count[3:1]};
+                            phase<={c==0 ? sweep_count[0] : state_in,phase[2:1]};
+                        end
+                        if(c==0)begin
+                            sweep_count<={sweep_enabled,sweep_count[3:1]};
+                            sweep_enabled<=sweep_negated;sweep_negated<=state_in;
+                        end
+                    end
+                    if(state_addr==10+c*2)period_count<={state_in,period_count[COUNTER_BITS-1:1]};
+                    if(c==2 && state_addr==8)wave_position<={state_in,wave_position[5:1]};
+                    if(c==3 && state_addr==17)noise_reload<={state_in,noise_reload[22:1]};
+                    if(c==3 && state_addr==18)lfsr<={state_in,lfsr[14:1]};
+                    if(c==0 && state_addr==19){sweep_shadow,sweep_frequency}<={state_in,sweep_shadow,sweep_frequency[10:1]};
+                end
+`else
                 if(state_write)begin
                     if(state_addr==9+c*2)begin
                         enabled<=state_wdata[0];length_count<=state_wdata[9:1];
@@ -299,6 +355,7 @@ module gba_psg (
                     if(c==3 && state_addr==18)lfsr<=state_wdata[14:0];
                     if(c==0 && state_addr==19)begin sweep_frequency<=state_wdata[10:0];sweep_shadow<=state_wdata[21:11];end
                 end
+`endif
 `endif
             end else begin
                 if(!dac_on) enabled<=0;

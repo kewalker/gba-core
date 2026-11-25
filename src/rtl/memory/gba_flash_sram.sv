@@ -20,6 +20,9 @@ module gba_flash_sram (
     output wire load_valid, boot_ready, fault,
     input wire export_lock,
     output wire export_locked,
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    output wire guest_save_written,
+`endif
     output wire [16:0] sram_a,
     inout wire [15:0] sram_dq,
     output wire sram_oe_n, sram_we_n, sram_ub_n, sram_lb_n
@@ -43,6 +46,9 @@ module gba_flash_sram (
         .clk,.mem_clk(load_clk),.load_reset,.req(ram_request),.write(ram_write),
         .addr(ram_addr),.wdata(ram_data),.mask(ram_mask),.rdata(ram_q),
         .ready(ram_ready),.guest_idle(ram_idle),
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+        .guest_save_written,
+`endif
         .host_write(load_write),.host_read(load_read),.host_addr(load_addr),
         .host_wdata(load_wdata),.host_rdata(load_rdata),.host_valid(load_valid),
         .boot_ready,.fault,.sram_a,.sram_dq,.sram_oe_n,.sram_we_n,.sram_ub_n,.sram_lb_n

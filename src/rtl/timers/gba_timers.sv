@@ -4,6 +4,9 @@ module gba_timers #(parameter bit CYCLE_ENABLE=0) (
     input logic reset,
 `ifdef GBK_SAVESTATE
     input wire state_hold,state_write,
+`ifdef GBK_STATE_SERIAL
+    input wire state_shift,state_restore,
+`endif
     input wire [3:0] state_addr,
     input wire [31:0] state_wdata,
     output wire state_valid,
@@ -31,12 +34,21 @@ module gba_timers #(parameter bit CYCLE_ENABLE=0) (
     always @*begin
         state_rdata=0;
         if(state_valid)begin
+`ifdef GBK_STATE_SERIAL
+            if(state_addr<8)state_rdata={31'd0,state_addr[0] ?
+                prescale_count[state_addr[2:1]][0] : count[state_addr[2:1]][0]};
+            else state_rdata={31'd0,irq[0]};
+`else
             if(state_addr<8)state_rdata=state_addr[0] ?
                 {control[state_addr[2:1]],prescale_count[state_addr[2:1]]} :
                 {reload[state_addr[2:1]],count[state_addr[2:1]]};
             else state_rdata={28'd0,irq};
+`endif
         end
     end
+`ifdef GBK_STATE_SERIAL
+    wire state_in=state_restore ? state_wdata[0] : state_rdata[0];
+`endif
 `endif
 
     wire hit = (addr[31:24] == 8'h04) && (addr[15:0] >= 16'h0100) &&
@@ -78,12 +90,23 @@ module gba_timers #(parameter bit CYCLE_ENABLE=0) (
             end
 `ifdef GBK_SAVESTATE
         end else if(state_frozen)begin
+`ifdef GBK_STATE_SERIAL
+            if(state_shift && state_valid)begin
+                if(state_addr<8)begin
+                    if(state_addr[0]){control[state_addr[2:1]],prescale_count[state_addr[2:1]]}<=
+                        {state_in,control[state_addr[2:1]],prescale_count[state_addr[2:1]][15:1]};
+                    else {reload[state_addr[2:1]],count[state_addr[2:1]]}<=
+                        {state_in,reload[state_addr[2:1]],count[state_addr[2:1]][15:1]};
+                end else irq<={state_in,irq[3:1]};
+            end
+`else
             if(state_write && state_valid)begin
                 if(state_addr<8)begin
                     if(state_addr[0])begin control[state_addr[2:1]]<=state_wdata[31:16];prescale_count[state_addr[2:1]]<=state_wdata[15:0];end
                     else begin reload[state_addr[2:1]]<=state_wdata[31:16];count[state_addr[2:1]]<=state_wdata[15:0];end
                 end else irq<=state_wdata[3:0];
             end
+`endif
 `endif
         end else begin
             irq <= 1'b0;

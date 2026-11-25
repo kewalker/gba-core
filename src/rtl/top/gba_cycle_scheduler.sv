@@ -15,6 +15,9 @@ module gba_cycle_scheduler #(
 `ifdef GBK_SAVESTATE
     // Assert only after CPU/DMA/memory drain. Host wall time is not guest time.
     input wire state_hold,state_write,
+`ifdef GBK_STATE_SERIAL
+    input wire state_shift,state_restore,
+`endif
     input wire [3:0] state_addr,
     input wire [31:0] state_wdata,
     output wire state_valid,
@@ -161,7 +164,11 @@ module gba_cycle_scheduler #(
         state_rdata=0;
         if(state_valid)case(state_addr)
             4'd0:state_rdata=32'(phase);
+`ifdef GBK_STATE_SERIAL
+            4'd1:state_rdata={31'd0,debt[0]};
+`else
             4'd1:state_rdata={20'd0,debt};
+`endif
 `ifdef GBK_GAMEPAK_PREFETCH
             4'd2:state_rdata={prefetch_state[19:0],pending_dma_charge,pending_cpu_charge};
             4'd3:state_rdata={prefetch_state[45:20],refill_pending,cpu_previous_write,dma_previous,dma_write_valid,dma_read_valid,cpu_history_valid};
@@ -169,12 +176,21 @@ module gba_cycle_scheduler #(
             4'd2:state_rdata={20'd0,pending_dma_charge,pending_cpu_charge};
             4'd3:state_rdata={26'd0,refill_pending,cpu_previous_write,dma_previous,dma_write_valid,dma_read_valid,cpu_history_valid};
 `endif
+`ifdef GBK_STATE_SERIAL
+            4'd4:state_rdata={31'd0,cpu_next[0]};
+            4'd5:state_rdata={31'd0,dma_read_next[0]};
+            4'd6:state_rdata={31'd0,dma_write_next[0]};
+`else
             4'd4:state_rdata=cpu_next;
             4'd5:state_rdata=dma_read_next;
             4'd6:state_rdata=dma_write_next;
+`endif
             default:state_rdata=0;
         endcase
     end
+`ifdef GBK_STATE_SERIAL
+    wire state_in=state_restore ? state_wdata[0] : state_rdata[0];
+`endif
 `endif
     // Partition the existing missing-cycle predicate, rather than counting
     // raw waits that can overlap native-cycle throttling. DMA has priority
@@ -210,18 +226,31 @@ module gba_cycle_scheduler #(
         end else if(state_frozen)begin
             if(state_write && state_valid)case(state_addr)
                 4'd0:phase<=PHASE_BITS'(state_wdata);
+`ifndef GBK_STATE_SERIAL
                 4'd1:debt<=state_wdata[11:0];
+`endif
                 4'd2:begin pending_cpu_charge<=state_wdata[5:0];pending_dma_charge<=state_wdata[11:6];end
                 4'd3:begin
                     cpu_history_valid<=state_wdata[0];dma_read_valid<=state_wdata[1];
                     dma_write_valid<=state_wdata[2];dma_previous<=state_wdata[3];
                     cpu_previous_write<=state_wdata[4];refill_pending<=state_wdata[5];
                 end
+`ifndef GBK_STATE_SERIAL
                 4'd4:cpu_next<=state_wdata;
                 4'd5:dma_read_next<=state_wdata;
                 4'd6:dma_write_next<=state_wdata;
+`endif
                 default:begin end
             endcase
+`ifdef GBK_STATE_SERIAL
+            if(state_shift && state_valid)case(state_addr)
+                4'd1:debt<={state_in,debt[11:1]};
+                4'd4:cpu_next<={state_in,cpu_next[31:1]};
+                4'd5:dma_read_next<={state_in,dma_read_next[31:1]};
+                4'd6:dma_write_next<={state_in,dma_write_next[31:1]};
+                default:begin end
+            endcase
+`endif
 `endif
         end else begin
             pending_cpu_charge<=cpu_charge;pending_dma_charge<=dma_charge;

@@ -6,13 +6,15 @@
 // are cancellation inputs, never independent resets of handshake toggles.
 module gba_state_async_port #(
     parameter integer ADDRESS_BITS=32,
-    parameter integer TARGET_BITS=1
+    parameter integer TARGET_BITS=1,
+    parameter integer WRITE_DATA_BITS=32,
+    parameter bit COMPACT_DATA=0
 )(
     input wire source_clk,source_cancel,
     input wire source_valid,source_write,source_response_ready,
     input wire [TARGET_BITS-1:0] source_target,
     input wire [ADDRESS_BITS-1:0] source_addr,
-    input wire [31:0] source_wdata,
+    input wire [WRITE_DATA_BITS-1:0] source_wdata,
     output wire source_ready,source_response,source_busy,
     output reg source_error=0,
     output reg [31:0] source_rdata=0,
@@ -20,20 +22,34 @@ module gba_state_async_port #(
     output wire destination_valid,destination_write,destination_response_ready,
     output wire [TARGET_BITS-1:0] destination_target,
     output wire [ADDRESS_BITS-1:0] destination_addr,
-    output wire [31:0] destination_wdata,
+    output wire [WRITE_DATA_BITS-1:0] destination_wdata,
     input wire destination_ready,destination_response,destination_error,
     input wire [31:0] destination_rdata
 );
-    localparam PAYLOAD_BITS=TARGET_BITS+ADDRESS_BITS+33;
+    localparam PAYLOAD_BITS=TARGET_BITS+ADDRESS_BITS+1+WRITE_DATA_BITS;
     localparam IDLE=0,WAIT_REPLY=1,REPLY=2;
     reg [1:0] source_phase=IDLE,destination_phase=IDLE;
     reg request_toggle=0,acknowledge=0,seen=0;
     reg source_aborting=0,destination_aborting=0;
     reg [PAYLOAD_BITS-1:0] held_request=0,active_request=0;
     reg [32:0] held_response=0;
-    (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] request_sync=0,ack_sync=0;
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    (* preserve, dont_merge, altera_attribute="-name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] request_sync=0;
+`else
+    (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] request_sync=0;
+`endif
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT_KEEP_ACK
+    // Keep the receiving flops separate from inferred SRAM shift registers.
+    (* preserve, dont_merge, altera_attribute="-name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] ack_sync=0;
+`else
+    (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] ack_sync=0;
+`endif
     (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [PAYLOAD_BITS-1:0] request_data1=0,request_data2=0;
     (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [32:0] response_data1=0,response_data2=0;
+    // The compact caller audits both bundled data paths after routing. The
+    // source holds each bus through the returning three-flop handshake.
+    wire [PAYLOAD_BITS-1:0] settled_request=COMPACT_DATA ? held_request : request_data2;
+    wire [32:0] settled_response=COMPACT_DATA ? held_response : response_data2;
     assign source_ready=source_phase==IDLE && !source_cancel;
     assign source_busy=source_phase!=IDLE;
     assign source_response=source_phase==REPLY;
@@ -51,8 +67,8 @@ module gba_state_async_port #(
             WAIT_REPLY:begin
                 if(source_cancel)source_aborting<=1;
                 if(ack_sync[2]==request_toggle)begin
-                    source_rdata<=response_data2[31:0];
-                    source_error<=response_data2[32] || source_aborting || source_cancel;
+                    source_rdata<=settled_response[31:0];
+                    source_error<=settled_response[32] || source_aborting || source_cancel;
                     source_phase<=REPLY;
                 end
             end
@@ -65,7 +81,7 @@ module gba_state_async_port #(
         request_data1<=held_request;request_data2<=request_data1;
         case(destination_phase)
             IDLE:if(request_sync[2]!=seen)begin
-                seen<=request_sync[2];active_request<=request_data2;destination_aborting<=0;
+                seen<=request_sync[2];active_request<=settled_request;destination_aborting<=0;
                 if(destination_cancel)begin held_response<={1'b1,32'd0};acknowledge<=request_sync[2];end
                 else destination_phase<=REPLY; // Issue one request, retain it until accepted.
             end

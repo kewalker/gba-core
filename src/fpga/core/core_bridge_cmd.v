@@ -73,6 +73,13 @@ input   wire    [31:0]  savestate_size,
 input   wire    [31:0]  savestate_maxloadsize,
 
 output  reg             osnotify_inmenu,
+`ifdef GBK_GAMEPAK_HEADER_TRIAL
+output  reg             osnotify_cart_selected,osnotify_cart_power,
+output  reg     [7:0]   osnotify_cart_adapter,
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+output  reg             osnotify_cart_gba_trial,
+`endif
+`endif
 
 output  reg             savestate_start,        // core should detect rising edge on this,
 input   wire            savestate_start_ack,    // and then assert ack for at least 1 cycle
@@ -88,6 +95,9 @@ input   wire            savestate_load_err,
 
 input   wire            target_dataslot_read,       // rising edge triggered
 input   wire            target_dataslot_write,
+`ifdef GBK_GAMEPAK_SAVE
+input   wire            cart_stats_slot,
+`endif
 input   wire            target_dataslot_getfile,
 input   wire            target_dataslot_openfile,
 
@@ -235,6 +245,14 @@ initial begin
     savestate_start <= 0;
     savestate_load <= 0;
     osnotify_inmenu <= 0;
+`ifdef GBK_GAMEPAK_HEADER_TRIAL
+    osnotify_cart_selected <= 0;
+    osnotify_cart_power <= 0;
+    osnotify_cart_adapter <= 0;
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+    osnotify_cart_gba_trial <= 0;
+`endif
+`endif
     
     status_setup_done_queue <= 0;
     target_dataslot_read_queue <= 0;
@@ -413,6 +431,11 @@ always @(posedge clk) begin
         end
         16'h0080: begin
             // Data slot request read
+`ifdef GBK_GAMEPAK_SAVE
+            if(host_20[15:0]==16'd4 && cart_stats_slot!==1'b1)begin
+                host_resultcode<=1;hstate<=ST_DONE_CODE;
+            end else
+`endif
             if(STATE_LIFECYCLE && !state_transfer_allowed)begin
                 host_resultcode<=2;hstate<=ST_DONE_CODE;
             end else begin
@@ -517,6 +540,21 @@ always @(posedge clk) begin
             osnotify_inmenu <= host_20[0];
             hstate <= ST_DONE_OK;
         end
+`ifdef GBK_GAMEPAK_HEADER_TRIAL
+        16'h00B1: begin
+            if(!reset_n)begin
+                osnotify_cart_selected <= host_20[24];
+                osnotify_cart_power <= host_20[16];
+                osnotify_cart_adapter <= host_20[7:0];
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+                // Observed on Pocket OS 2.7 with AGSE. Leave the bus idle
+                // on the earlier GBC notification and other unverified values.
+                osnotify_cart_gba_trial <= host_20[15];
+`endif
+            end
+            hstate <= ST_DONE_OK;
+        end
+`endif
         default: begin
             hstate <= ST_DONE_ERR;
         end

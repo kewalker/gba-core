@@ -20,6 +20,9 @@ module gba_cartridge_psram #(
     input  logic        load_clk,
     input  logic        reset,
     input  logic        load_write,
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+    output wire         load_ready,load_idle,
+`endif
     input  logic [22:0] load_addr,
     input  logic [31:0] load_wdata,
     input  logic        cpu_clk,
@@ -65,15 +68,33 @@ module gba_cartridge_psram #(
     // accepting a word while the two-halfword PSRAM writer is idle.
     localparam integer LOAD_FIFO_DEPTH = 64;
     // Shallow loader queues fit flow-through MLABs; reserve M10Ks for ROM.
+`ifdef GBK_GAMEPAK_BOOT_BLOCK_FIFO
+    (* ramstyle="M10K, no_rw_check" *) logic [22:0] load_fifo_addr [0:LOAD_FIFO_DEPTH-1];
+    (* ramstyle="M10K, no_rw_check" *) logic [31:0] load_fifo_data [0:LOAD_FIFO_DEPTH-1];
+`else
     (* ramstyle="MLAB, no_rw_check" *) logic [22:0] load_fifo_addr [0:LOAD_FIFO_DEPTH-1];
     (* ramstyle="MLAB, no_rw_check" *) logic [31:0] load_fifo_data [0:LOAD_FIFO_DEPTH-1];
+`endif
     logic [5:0]  load_fifo_write_ptr, load_fifo_read_ptr;
     logic [6:0]  load_fifo_count;
     wire         load_fifo_full = (load_fifo_count == LOAD_FIFO_DEPTH);
     logic load_inflight, load_half, load_issued, load_busy_seen;
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+    assign load_ready=!reset && !load_fifo_full;
+    assign load_idle=!reset && load_fifo_count==0 && !load_write && !load_inflight;
+`endif
     logic [22:0] load_word_addr;
     logic [31:0] load_word_data;
     logic read_inflight, read_issued;
+    wire load_fifo_pop=!load_inflight && !read_inflight && load_fifo_count!=0;
+`ifdef GBK_GAMEPAK_BOOT_BLOCK_FIFO
+    // Only an in-flight write consumes these outputs. A synchronous read
+    // without output reset lets Quartus pack the existing capture into RAM.
+    always @(posedge load_clk) if(!reset && load_fifo_pop)begin
+        load_word_addr <= load_fifo_addr[load_fifo_read_ptr];
+        load_word_data <= load_fifo_data[load_fifo_read_ptr];
+    end
+`endif
     logic [1:0] pair_half;
     logic [1:0] pair_last;
     logic [ROM_WORD_BITS:0] read_half_addr;
@@ -264,8 +285,10 @@ module gba_cartridge_psram #(
             load_half <= 1'b0;
             load_issued <= 1'b0;
             load_busy_seen <= 1'b0;
+`ifndef GBK_GAMEPAK_BOOT_BLOCK_FIFO
             load_word_addr <= 0;
             load_word_data <= 0;
+`endif
             read_inflight <= 1'b0;
             pair_half<=0;
             pair_last<=0;req_pair_sync1<=0;req_pair_sync2<=0;
@@ -299,9 +322,11 @@ module gba_cartridge_psram #(
             load_fifo_write_ptr <= load_fifo_write_ptr + 1'b1;
         end
 
-        if (!load_inflight && !read_inflight && (load_fifo_count != 0)) begin
+        if (load_fifo_pop) begin
+`ifndef GBK_GAMEPAK_BOOT_BLOCK_FIFO
             load_word_addr <= load_fifo_addr[load_fifo_read_ptr];
             load_word_data <= load_fifo_data[load_fifo_read_ptr];
+`endif
             load_fifo_read_ptr <= load_fifo_read_ptr + 1'b1;
             load_half <= 1'b0;
             load_inflight <= 1'b1;
@@ -309,8 +334,7 @@ module gba_cartridge_psram #(
             load_busy_seen <= 1'b0;
         end
 
-        case ({load_write && !load_fifo_full,
-               !load_inflight && !read_inflight && (load_fifo_count != 0)})
+        case ({load_write && !load_fifo_full, load_fifo_pop})
             2'b10: load_fifo_count <= load_fifo_count + 1'b1;
             2'b01: load_fifo_count <= load_fifo_count - 1'b1;
             default: load_fifo_count <= load_fifo_count;

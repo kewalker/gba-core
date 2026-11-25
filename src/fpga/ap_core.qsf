@@ -823,7 +823,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_rtc_persistence
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/overlay/gba_rtc_persistence_link.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/overlay/gba_save_datatable.sv
 
-set_global_assignment -name SEED 31
+set_global_assignment -name SEED 7
 set_global_assignment -name PLACEMENT_EFFORT_MULTIPLIER 3.0
 set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
 
@@ -861,6 +861,8 @@ set_global_assignment -name VERILOG_MACRO GBK_RTC_PERSISTENCE
 
 set_global_assignment -name VERILOG_MACRO GBK_SAVESTATE
 set_global_assignment -name VERILOG_MACRO GBK_POCKET_STATE
+# Pocket Memories: flop-resident register words move as LSB-first rings.
+set_global_assignment -name VERILOG_MACRO GBK_STATE_SERIAL
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/state/gba_state_apf_buffer.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/state/gba_state_async_port.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/state/gba_state_freeze.sv
@@ -983,3 +985,40 @@ set_global_assignment -name VERILOG_MACRO GBK_CPU_OVERLAP
 set_global_assignment -name VERILOG_MACRO GBK_SHARED_ARM_SHIFT
 set_global_assignment -name VERILOG_MACRO GBK_SHARED_ARM_ADD
 set_global_assignment -name VERILOG_MACRO GBK_SHARED_THUMB_SHIFT
+# Physical cartridge (Play Cartridge): boot, save import and automatic writeback.
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_HEADER_TRIAL"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_BOOT_TRIAL"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_BOOT_LEAN"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_BOOT_BLOCK_FIFO"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_BOOT_SCANOUT"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_BOOT_SCANOUT_KEEP_ACK"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_BOOT_RESET_FIX"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_BOOT_RTC_INIT"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_SAVE"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_STATS_FILE"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_PROFILE"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_SERIAL_IMPORT"
+# RETAIL_CATALOG enables the profile-driven boot gating and save-kind glue.
+# DETECT supplies that profile by evaluating the cartridge; no list is built in.
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_RETAIL_CATALOG"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_DETECT"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_AUTO_WRITEBACK"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_EEPROM_WRITEBACK"
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_FLASH128"
+# Keep the last eight pre-write backups per game (CODE-00..07.sav, CODE-bk.idx).
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_BACKUP_RING"
+# Draw "Loading..." and a progress bar while the cartridge copies.
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_LOADING_SCREEN"
+# Save the session to CODE-unsaved.sav when writeback is refused or fails.
+set_global_assignment -name VERILOG_MACRO "GBK_GAMEPAK_UNSAVED_FALLBACK"
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_rom_reader.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_header_probe.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_rom_loader.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_profile.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_rom_size_probe.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_detect.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_flash.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_save.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_save_backup.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memory/gba_gamepak_save_import.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/overlay/gba_gamepak_stats_file.sv

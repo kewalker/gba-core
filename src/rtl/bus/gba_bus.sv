@@ -26,10 +26,16 @@ module gba_bus #(
     input wire state_cpu_request,state_dma_request,state_hold,state_reg_write,
     input wire [15:0] state_reg_addr,
     input wire [31:0] state_reg_wdata,
+`ifdef GBK_STATE_SERIAL
+    input wire [1:0] state_reg_shift,
+`endif
     output wire state_cpu_quiescent,state_dma_quiescent,state_held,state_transactions_idle,
     output reg state_reg_valid,
     output reg [31:0] state_reg_rdata,
     input wire state_save_raw_access,state_save_raw_eeprom,
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+    input wire cart_eeprom_import,
+`endif
     output wire state_save_raw_idle,state_save_raw_done,
     input wire state_bulk_valid,state_bulk_write,state_bulk_response_ready,
     input wire [31:0] state_bulk_addr,state_bulk_wdata,
@@ -61,11 +67,18 @@ module gba_bus #(
     input wire save_sram, save_flash512,
     input wire save_eeprom, cart_large,
     output wire save_eeprom_large,
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    output wire [1:0] save_eeprom_width,  // {6-bit seen, 14-bit seen} from the game
+    output wire save_eeprom_commit,       // toggles once per committed game write
+`endif
     input logic [14:0] save_load_addr,
     input logic [31:0] save_load_wdata,
     output wire [31:0] save_load_rdata,
     input wire save_export_lock,
     output wire save_export_locked,
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    output wire guest_save_written,
+`endif
     input wire save_load_read,
     output wire save_load_valid, save_boot_ready, save_fault,
     output wire [16:0] save_mem_a,
@@ -75,6 +88,12 @@ module gba_bus #(
     input  logic        cart_ready,
     output logic        cart_req,
     output logic [31:0] cart_addr,
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    input wire native_cart,
+    output wire cart_write,
+    output wire [1:0] cart_size,
+    output wire [31:0] cart_wdata,
+`endif
     output wire         cart_streaming,
     output logic [31:0] debug_pc,
     output logic [31:0] debug_cpsr,
@@ -319,6 +338,9 @@ module gba_bus #(
 `endif
 `ifdef GBK_SAVESTATE
             .state_hold(state_access),.state_write(state_bus_write && state_reg_addr[15:8]==1 && state_reg_addr[7:0]<7),
+`ifdef GBK_STATE_SERIAL
+            .state_shift(state_reg_shift[0] && state_access && state_reg_addr[15:8]==1 && state_reg_addr[7:0]<7),.state_restore(state_reg_shift[1]),
+`endif
             .state_addr(state_reg_addr[3:0]),.state_wdata(state_reg_wdata),
             .state_valid(state_scheduler_valid),.state_rdata(state_scheduler_rdata),
 `endif
@@ -344,6 +366,9 @@ module gba_bus #(
     arm7tdmi_core #(.RESET_PC(RESET_PC),.TIMED_EXECUTION(FAST_CPU)) cpu (
 `ifdef GBK_SAVESTATE
         .state_request(state_cpu_request),.state_write(state_bus_write && state_reg_addr[15:8]==0 && state_reg_addr[7:0]<45),
+`ifdef GBK_STATE_SERIAL
+        .state_shift(state_reg_shift[0] && state_access && state_reg_addr[15:8]==0 && state_reg_addr[7:0]<45),.state_restore(state_reg_shift[1]),
+`endif
         .state_addr(state_reg_addr[5:0]),.state_wdata(state_reg_wdata),
         .state_quiescent(state_cpu_quiescent),.state_valid(state_cpu_valid),.state_rdata(state_cpu_rdata),
 `endif
@@ -396,11 +421,17 @@ module gba_bus #(
                      .NATIVE_TIMING(NATIVE_TIMING),.BLOCK_OAM(BLOCK_OAM),.FAST_CPU(FAST_CPU)) memory (
 `ifdef GBK_SAVESTATE
         .state_dma_request,.state_hold(state_access),.state_reg_write(state_bus_write),.state_reg_addr,.state_reg_wdata,
+`ifdef GBK_STATE_SERIAL
+        .state_reg_shift({state_reg_shift[1],state_reg_shift[0] && state_access}),
+`endif
         .state_cpu_lookup_addr(cpu_addr),
         .state_cpu_lookup_idle(!state_bulk_busy),
         .state_transactions_idle(state_map_idle),
         .state_dma_quiescent,.state_reg_valid(state_memory_valid),.state_reg_rdata(state_memory_rdata),
         .state_save_raw_access,.state_save_raw_eeprom,.state_save_raw_idle,.state_save_raw_done,
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+        .cart_eeprom_import,
+`endif
 `endif
         .clk, .reset, .render_clk,.stopped(guest_stopped),.display_position,.postflg(cpu_postflg),.stop_wake,.cpu_bus_lock,
         .cart_rtc,.rtc_host_toggle,.rtc_host_valid,.rtc_host_date,.rtc_host_time,
@@ -416,10 +447,20 @@ module gba_bus #(
         .req(state_map_req),.write(state_map_write),.size(state_map_size),.addr(state_map_addr),
         .wdata(state_map_wdata),.rdata(state_map_rdata),.ready(state_map_ready),
 `else
-        .req(cpu_req), .write(cpu_write), .size(cpu_size), .addr(cpu_addr),
+        .req(cpu_req), .write(cpu_write),
+        // The ARM core fetches an aligned word even in Thumb mode. Its data
+        // width can remain set to a prior byte or halfword transfer.
+        .size(
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+            native_cart && timing_code ? 2'd2 :
+`endif
+            cpu_size), .addr(cpu_addr),
         .wdata(cpu_wdata), .rdata(mem_rdata), .ready(mem_ready),
 `endif
         .cart_req, .cart_addr, .cart_streaming, .cart_rdata, .cart_ready,
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        .native_cart,.cart_write,.cart_size,.cart_wdata,
+`endif
         .ppu_vram_write, .ppu_vram_addr, .ppu_vram_wdata,.ppu_mosaic,
         .ppu_vram_read_addr, .ppu_vram_rdata, .ppu_vram_debug0,
         .ppu_bg_map_read_addr, .ppu_bg_map_rdata,
@@ -449,7 +490,13 @@ module gba_bus #(
         .ewram_ready, .ewram_rdata, .ewram_req, .ewram_write,
         .ewram_addr, .ewram_wdata, .ewram_size, .controller_keys,
         .save_sram, .save_flash512, .save_eeprom, .cart_large, .save_eeprom_large, .save_load_write, .save_load_addr, .save_load_wdata,
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+        .save_eeprom_width, .save_eeprom_commit,
+`endif
         .save_load_rdata, .save_export_lock, .save_export_locked,
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+        .guest_save_written,
+`endif
         .audio_left,.audio_right,
         .debug_sound_bias, .debug_irq_vector_write_data,
         .debug_irq_vector_write_status,

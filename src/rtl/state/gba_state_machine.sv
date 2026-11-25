@@ -20,6 +20,9 @@ module gba_state_machine #(
     output wire state_reg_write,
     output wire [15:0] state_reg_addr,
     output wire [31:0] state_reg_wdata,
+`ifdef GBK_STATE_SERIAL
+    output wire [1:0] state_reg_shift,
+`endif
     input wire state_reg_valid,
     input wire [31:0] state_reg_rdata,
     output wire state_bulk_valid,state_bulk_write,state_bulk_response_ready,
@@ -89,6 +92,9 @@ module gba_state_machine #(
         .request_target(guest_target),.request_addr(guest_addr),.request_wdata(guest_wdata),
         .request_ready(guest_ready),.response_valid(guest_response),.response_error(guest_error),.response_rdata(guest_rdata),
         .register_write(state_reg_write),.register_addr(state_reg_addr),.register_wdata(state_reg_wdata),
+`ifdef GBK_STATE_SERIAL
+        .register_shift(state_reg_shift),
+`endif
         .register_valid(state_reg_valid),.register_rdata(state_reg_rdata),
         .ram_valid(state_bulk_valid),.ram_write(state_bulk_write),.ram_response_ready(state_bulk_response_ready),
         .ram_addr(state_bulk_addr),.ram_wdata(state_bulk_wdata),.ram_ready(state_bulk_ready),

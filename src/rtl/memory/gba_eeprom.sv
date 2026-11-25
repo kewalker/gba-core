@@ -24,6 +24,11 @@ module gba_eeprom #(
     input wire export_lock,
     output reg export_locked=0,
     output wire capacity_large
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    // The game's own command widths and a toggle per committed write.
+    ,output wire [1:0] game_width
+    ,output reg commit_toggle=0
+`endif
 );
     localparam IDLE=0,COMMAND=1,ADDRESS=2,DATA=3,STOP=4,OUTPUT=5;
     localparam BUSY_BITS=$clog2(PROGRAM_CYCLES+1);
@@ -36,6 +41,10 @@ module gba_eeprom #(
     reg commit=0;
     reg [BUSY_BITS-1:0] busy=0;
     reg large_seen=0, host_large=0;
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    reg narrow_seen=0;
+    assign game_width={narrow_seen,large_seen};
+`endif
     (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [2:0] lock_sync=0;
     (* altera_attribute="-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg [1:0] host_large_sync=0;
 `ifdef GBK_SAVESTATE
@@ -93,6 +102,10 @@ module gba_eeprom #(
         else if(!state_frozen)
 `endif
         if(access && write && (state==IDLE || state==OUTPUT) && bit_in && (dma_count==17 || dma_count==81)) large_seen<=1;
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+        if(access && ready && write && busy==0 && (state==IDLE || state==OUTPUT) && bit_in && (dma_count==9 || dma_count==73)) narrow_seen<=1;
+        if(commit)commit_toggle<=!commit_toggle;
+`endif
         // A completed 64-bit write drains even if guest reset follows STOP.
         export_locked<=lock_sync[2] && !commit;
     end

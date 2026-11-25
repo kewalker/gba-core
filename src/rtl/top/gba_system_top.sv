@@ -26,6 +26,9 @@ module gba_system_top #(
     input wire state_cpu_request,state_dma_request,state_hold,state_reg_write,
     input wire [15:0] state_reg_addr,
     input wire [31:0] state_reg_wdata,
+`ifdef GBK_STATE_SERIAL
+    input wire [1:0] state_reg_shift,
+`endif
     output wire state_cpu_quiescent,state_dma_quiescent,state_held,state_reg_valid,
     output wire state_transactions_idle,state_resume_ready,state_resume_complete,
     input wire state_resume_prepare,
@@ -33,6 +36,9 @@ module gba_system_top #(
     // Host-clock signals for exclusive raw save-port ownership; guest save
     // type and the ordinary mirrored pre-discovery import remain unchanged.
     input wire state_save_raw_access,state_save_raw_eeprom,
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+    input wire cart_eeprom_import,
+`endif
     output wire state_save_raw_idle,state_save_raw_done,
     input wire state_bulk_valid,state_bulk_write,state_bulk_response_ready,
     input wire [31:0] state_bulk_addr,state_bulk_wdata,
@@ -73,20 +79,47 @@ module gba_system_top #(
     input  logic        cart_load_write,
     input  logic [22:0] cart_load_addr,
     input  logic [31:0] cart_load_wdata,
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+    output wire         cart_load_ready,cart_load_idle,
+`endif
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+    input  wire         cart_boot_scanout,
+    output wire         cart_boot_frame_start,
+`endif
     input  logic        bios_load_write,
     input  logic [11:0] bios_load_addr,
     input  logic [31:0] bios_load_wdata,
     input logic save_load_write,
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+    input wire [2:0] cart_save_profile,
+`endif
+`ifdef GBK_GAMEPAK_DETECT
+    output wire save_flash512_signature,save_flash1m_signature,
+`endif
     output wire save_sram,
     output wire save_eeprom,save_eeprom_large,
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+    output wire [1:0] save_eeprom_width,  // {6-bit seen, 14-bit seen} from the game
+    output wire save_eeprom_commit,       // toggles once per committed game write
+`endif
     input wire cart_large,
     input logic [14:0] save_load_addr,
     input logic [31:0] save_load_wdata,
     output wire [31:0] save_load_rdata,
     input wire save_export_lock,
     output wire save_export_locked,
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    output wire guest_save_written,
+`endif
     output logic        cart_req,
     output logic [31:0] cart_addr,
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    input wire native_cart,native_cart_ready,
+    input wire [31:0] native_cart_rdata,
+    output wire cart_write,
+    output wire [1:0] cart_size,
+    output wire [31:0] cart_wdata,
+`endif
     output logic [31:0] cart_rdata,
     output logic        cart_ready,
     output logic [8:0]  video_r,
@@ -309,6 +342,9 @@ module gba_system_top #(
     gba_reset_sync render_reset_sync(.clk(fast_clk),.reset_in(reset),.reset_out(reset_render));
     wire raw_stopped,stop_resync_pause,stop_resync_blank;
     wire [16:0] guest_display_position,host_display_position;
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+    assign cart_boot_frame_start=host_display_position==0;
+`endif
 `ifdef GBK_SAVESTATE
     wire state_video_blank,state_video_invalidate,state_render_invalidate;
     wire state_bus_idle,state_rom_cpu_idle,state_rom_memory_idle,state_ewram_idle,state_ram_cdc_idle;
@@ -389,9 +425,25 @@ module gba_system_top #(
     assign audio_left=fast_audio_muted ? 16'sd0 : guest_audio_left;
     assign audio_right=fast_audio_muted ? 16'sd0 : guest_audio_right;
 `endif
+`ifdef GBK_GAMEPAK_RETAIL_CATALOG
+    wire signature_sram,signature_eeprom,signature_flash512,signature_flash1m;
+`ifdef GBK_GAMEPAK_DETECT
+    assign save_flash512_signature=signature_flash512;
+    assign save_flash1m_signature=signature_flash1m;
+`endif
+    wire known_save=cart_save_profile>=2 && cart_save_profile<=6;
+    assign save_sram=known_save ? cart_save_profile==2 : signature_sram;
+    assign save_eeprom=known_save ? cart_save_profile==5 || cart_save_profile==6 : signature_eeprom;
+    assign save_flash512=known_save ? cart_save_profile==3 : signature_flash512;
+    gba_save_type save_type(.clk(cart_load_clk),.reset(cart_load_reset),
+        .load_write(cart_load_write),.load_addr(cart_load_addr),.load_wdata(cart_load_wdata),
+        .save_sram(signature_sram),.save_eeprom(signature_eeprom),.save_flash512(signature_flash512),
+        .save_flash1m(signature_flash1m));
+`else
     gba_save_type save_type(.clk(cart_load_clk),.reset(cart_load_reset),
         .load_write(cart_load_write),.load_addr(cart_load_addr),
         .load_wdata(cart_load_wdata),.save_sram,.save_eeprom,.save_flash512);
+`endif
     wire cart_rtc;
     gba_rtc_signature rtc_signature(.clk(cart_load_clk),.reset(cart_load_reset),
         .load_write(cart_load_write),.load_addr(cart_load_addr),.load_wdata(cart_load_wdata),.enabled(cart_rtc));
@@ -404,7 +456,13 @@ module gba_system_top #(
               .EXECUTION_LOOKAHEAD(EXECUTION_LOOKAHEAD)) bus (
 `ifdef GBK_SAVESTATE
         .state_cpu_request,.state_dma_request,.state_hold,.state_reg_write,.state_reg_addr,.state_reg_wdata,
+`ifdef GBK_STATE_SERIAL
+        .state_reg_shift,
+`endif
         .state_save_raw_access,.state_save_raw_eeprom,.state_save_raw_idle,.state_save_raw_done,
+`ifdef GBK_GAMEPAK_SERIAL_IMPORT
+        .cart_eeprom_import,
+`endif
         .state_cpu_quiescent,.state_dma_quiescent,.state_held,.state_reg_valid,.state_reg_rdata,
         .state_transactions_idle(state_bus_idle),
         .state_bulk_valid,.state_bulk_write,.state_bulk_response_ready,.state_bulk_addr,.state_bulk_wdata,
@@ -430,6 +488,9 @@ module gba_system_top #(
         .bios_load_clk(cart_load_clk), .bios_load_reset(cart_load_reset), .bios_load_write, .bios_load_addr, .bios_load_wdata,
         .debug_restart_context, .debug_restart_valid,
         .cart_rdata, .cart_ready, .cart_req, .cart_addr, .cart_streaming,
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+        .native_cart,.cart_write,.cart_size,.cart_wdata,
+`endif
         .debug_dma_source, .debug_dma_destination, .debug_dma_status,
         .debug_pc, .debug_cpsr, .debug_instr, .debug_r1, .debug_bios_sound_state, .debug_execution_state, .debug_runtime_memory, .debug_irq_counts,
         .debug_bias_pc, .debug_bias_instr, .debug_bias_r1, .debug_bias_r2,
@@ -499,7 +560,13 @@ module gba_system_top #(
         .ewram_ready, .ewram_rdata, .ewram_req, .ewram_write,
         .ewram_addr, .ewram_wdata, .ewram_size, .controller_keys(controller_keys[9:0]),
         .save_sram, .save_flash512, .save_eeprom, .cart_large, .save_eeprom_large, .save_load_write, .save_load_addr, .save_load_wdata,
+`ifdef GBK_GAMEPAK_EEPROM_WRITEBACK
+        .save_eeprom_width, .save_eeprom_commit,
+`endif
         .save_load_rdata, .save_export_lock, .save_export_locked
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+        ,.guest_save_written
+`endif
     );
 
     wire cart_streaming;
@@ -586,6 +653,19 @@ module gba_system_top #(
         assign dram_a=0;assign dram_ba=0;assign dram_dqm=0;assign dram_dq=16'hzzzz;
         assign dram_cke=0;assign {dram_ras_n,dram_cas_n,dram_we_n}=3'b111;
     end endgenerate
+`ifdef GBK_GAMEPAK_NATIVE_BUS
+    wire cache_cart_ready;
+    wire [31:0] cache_cart_rdata;
+    assign cart_ready=native_cart ? native_cart_ready : cache_cart_ready;
+    assign cart_rdata=native_cart ? native_cart_rdata : cache_cart_rdata;
+    wire cache_cart_req=cart_req && !native_cart;
+`else
+    wire cache_cart_req=cart_req;
+    wire cache_cart_ready;
+    wire [31:0] cache_cart_rdata;
+    assign cart_ready=cache_cart_ready;
+    assign cart_rdata=cache_cart_rdata;
+`endif
     generate
         if (EXTERNAL_CARTRIDGE) begin : external_cartridge
             // 8 KiB ROM cache; native timing and physical read latency stay unchanged.
@@ -600,10 +680,13 @@ module gba_system_top #(
 `endif
                 .load_write(cart_load_write), .load_addr(cart_load_addr),
                 .load_wdata(cart_load_wdata),
-                .cpu_clk(execution_clk), .cpu_req(cart_req), .cpu_addr(cart_addr),
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+                .load_ready(cart_load_ready),.load_idle(cart_load_idle),
+`endif
+                .cpu_clk(execution_clk), .cpu_req(cache_cart_req), .cpu_addr(cart_addr),
                 .cpu_streaming(cart_streaming),
                 .profile_reset(reset_exec),.debug_profile(debug_rom_profile),
-                .cpu_rdata(cart_rdata), .cpu_ready(cart_ready),
+                .cpu_rdata(cache_cart_rdata), .cpu_ready(cache_cart_ready),
                 .cram_a, .cram_dq, .cram_wait,
                 .cram_clk, .cram_adv_n, .cram_cre,
                 .cram_ce0_n, .cram_ce1_n, .cram_oe_n, .cram_we_n,
@@ -613,8 +696,11 @@ module gba_system_top #(
                 .response_valid(rom_response),.response_ready(rom_response_ready),.response_data(memory_rdata)
             );
         end else begin : internal_cartridge
+`ifdef GBK_GAMEPAK_BOOT_TRIAL
+            assign cart_load_ready=0,cart_load_idle=0;
+`endif
 `ifdef GBK_SAVESTATE
-            assign state_rom_cpu_idle=!cart_req;assign state_rom_memory_idle=1'b1;
+            assign state_rom_cpu_idle=!cache_cart_req;assign state_rom_memory_idle=1'b1;
 `endif
             assign rom_memory_valid=0;assign rom_memory_write=0;assign rom_memory_addr=0;
             assign rom_memory_wdata=0;assign rom_memory_byteena=0;assign rom_response_ready=0;
@@ -622,8 +708,8 @@ module gba_system_top #(
             gba_cartridge cartridge (
                 .load_clk(cart_load_clk), .load_write(cart_load_write),
                 .load_addr(cart_load_addr[17:0]), .load_wdata(cart_load_wdata),
-                .cpu_clk(execution_clk), .cpu_req(cart_req), .cpu_addr(cart_addr),
-                .cpu_rdata(cart_rdata), .cpu_ready(cart_ready)
+                .cpu_clk(execution_clk), .cpu_req(cache_cart_req), .cpu_addr(cart_addr),
+                .cpu_rdata(cache_cart_rdata), .cpu_ready(cache_cart_ready)
             );
             assign cram_a = 0;
             assign cram_dq = 16'hzzzz;
@@ -692,6 +778,9 @@ module gba_system_top #(
 `endif
         .video_skip,.raster_position(host_display_position),
         .clk(clk), .reset(reset_video),
+`ifdef GBK_GAMEPAK_BOOT_SCANOUT
+        .raster_reset(reset_video && !cart_boot_scanout),
+`endif
         .render_clk(RENDER_SCHEDULER ? fast_clk : clk),
         .pixel_ce(ppu_pixel_ce),
         .vram_write(ppu_vram_write),

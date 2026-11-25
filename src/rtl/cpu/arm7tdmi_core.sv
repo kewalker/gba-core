@@ -43,6 +43,9 @@ module arm7tdmi_core #(
     // Experimental state port, execution-clock domain. Hold the request until
     // serialization/restore is complete. Reads/writes are valid only after ack.
     input wire state_request,state_write,
+`ifdef GBK_STATE_SERIAL
+    input wire state_shift,state_restore,
+`endif
     input wire [5:0] state_addr,
     input wire [31:0] state_wdata,
     output wire state_quiescent,state_valid,
@@ -487,6 +490,9 @@ module arm7tdmi_core #(
 `ifdef GBK_SAVESTATE
     // CPU section v1: 45 little-endian words; see savestate implementation plan.
     // Transient execution state is drained, diagnostic history is not guest state.
+`ifdef GBK_STATE_SERIAL
+    wire state_in=state_restore ? state_wdata[0] : state_rdata[0];
+`endif
     always @* begin
         state_rdata=0;
         // Borrow the ordinary Rn read selector while execution is quiescent.
@@ -496,22 +502,49 @@ module arm7tdmi_core #(
             6'd15:state_rdata=r[15];
             6'd16:state_rdata=cpsr;
             6'd17:state_rdata={30'd0,irq_pending,thumb};
+`ifdef GBK_STATE_SERIAL
+            6'd18:state_rdata={31'd0,user_sp_bank[0]};
+            6'd19:state_rdata={31'd0,user_lr_bank[0]};
+            6'd20:state_rdata={31'd0,svc_sp_bank[0]};
+            6'd21:state_rdata={31'd0,svc_lr_bank[0]};
+`else
             6'd18:state_rdata=user_sp_bank;
             6'd19:state_rdata=user_lr_bank;
             6'd20:state_rdata=svc_sp_bank;
             6'd21:state_rdata=svc_lr_bank;
+`endif
             6'd22:state_rdata=current_spsr;
+`ifdef GBK_STATE_SERIAL
+            6'd23:state_rdata={31'd0,irq_sp_bank[0]};
+            6'd24:state_rdata={31'd0,irq_lr_bank[0]};
+`else
             6'd23:state_rdata=irq_sp_bank;
             6'd24:state_rdata=irq_lr_bank;
+`endif
             6'd25:state_rdata=current_spsr;
+`ifdef GBK_STATE_SERIAL
+            6'd26:state_rdata={31'd0,und_sp_bank[0]};
+            6'd27:state_rdata={31'd0,und_lr_bank[0]};
+`else
             6'd26:state_rdata=und_sp_bank;
             6'd27:state_rdata=und_lr_bank;
+`endif
             6'd28:state_rdata=current_spsr;
+`ifdef GBK_STATE_SERIAL
+            6'd29:state_rdata={31'd0,fiq_sp_bank[0]};
+            6'd30:state_rdata={31'd0,fiq_lr_bank[0]};
+`else
             6'd29:state_rdata=fiq_sp_bank;
             6'd30:state_rdata=fiq_lr_bank;
+`endif
             6'd31:state_rdata=current_spsr;
+`ifdef GBK_STATE_SERIAL
+            6'd32:state_rdata={31'd0,abt_sp_bank[0]};
+            6'd33:state_rdata={31'd0,abt_lr_bank[0]};
+`else
             6'd32:state_rdata=abt_sp_bank;
             6'd33:state_rdata=abt_lr_bank;
+`endif
             6'd34:state_rdata=current_spsr;
             6'd35,6'd36,6'd37,6'd38,6'd39:state_rdata=cpsr[4:0]==5'h11 ? inactive_read_value : 32'd0;
             6'd40,6'd41,6'd42,6'd43,6'd44:state_rdata=cpsr[4:0]!=5'h11 ? inactive_read_value : 32'd0;
@@ -1311,22 +1344,32 @@ module arm7tdmi_core #(
                 6'd15:r[15]<=state_wdata;
                 6'd16:cpsr<=state_wdata;
                 6'd17:begin thumb<=state_wdata[0];irq_pending<=state_wdata[1];end
+`ifndef GBK_STATE_SERIAL
                 6'd18:user_sp_bank<=state_wdata;
                 6'd19:user_lr_bank<=state_wdata;
                 6'd20:svc_sp_bank<=state_wdata;
                 6'd21:svc_lr_bank<=state_wdata;
+`endif
                 6'd22:svc_spsr<=state_wdata;
+`ifndef GBK_STATE_SERIAL
                 6'd23:irq_sp_bank<=state_wdata;
                 6'd24:irq_lr_bank<=state_wdata;
+`endif
                 6'd25:irq_spsr<=state_wdata;
+`ifndef GBK_STATE_SERIAL
                 6'd26:und_sp_bank<=state_wdata;
                 6'd27:und_lr_bank<=state_wdata;
+`endif
                 6'd28:und_spsr<=state_wdata;
+`ifndef GBK_STATE_SERIAL
                 6'd29:fiq_sp_bank<=state_wdata;
                 6'd30:fiq_lr_bank<=state_wdata;
+`endif
                 6'd31:fiq_spsr<=state_wdata;
+`ifndef GBK_STATE_SERIAL
                 6'd32:abt_sp_bank<=state_wdata;
                 6'd33:abt_lr_bank<=state_wdata;
+`endif
                 6'd34:abt_spsr<=state_wdata;
                 // Reuse the existing bank-shadow write selector/data bus.
                 // Describing ten independent writes creates another wide mux.
@@ -1334,6 +1377,23 @@ module arm7tdmi_core #(
                 6'd40,6'd41,6'd42,6'd43,6'd44:write_high_shadow(1'b1,3'(state_addr-40),state_wdata);
                 default:begin end
             endcase
+`ifdef GBK_STATE_SERIAL
+            if(state_shift && state_valid)case(state_addr)
+                6'd18:user_sp_bank<={state_in,user_sp_bank[31:1]};
+                6'd19:user_lr_bank<={state_in,user_lr_bank[31:1]};
+                6'd20:svc_sp_bank<={state_in,svc_sp_bank[31:1]};
+                6'd21:svc_lr_bank<={state_in,svc_lr_bank[31:1]};
+                6'd23:irq_sp_bank<={state_in,irq_sp_bank[31:1]};
+                6'd24:irq_lr_bank<={state_in,irq_lr_bank[31:1]};
+                6'd26:und_sp_bank<={state_in,und_sp_bank[31:1]};
+                6'd27:und_lr_bank<={state_in,und_lr_bank[31:1]};
+                6'd29:fiq_sp_bank<={state_in,fiq_sp_bank[31:1]};
+                6'd30:fiq_lr_bank<={state_in,fiq_lr_bank[31:1]};
+                6'd32:abt_sp_bank<={state_in,abt_sp_bank[31:1]};
+                6'd33:abt_lr_bank<={state_in,abt_lr_bank[31:1]};
+                default:begin end
+            endcase
+`endif
 `endif
         end else if(!halted) begin
             if(exec_pending) begin

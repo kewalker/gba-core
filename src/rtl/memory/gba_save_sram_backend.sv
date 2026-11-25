@@ -15,6 +15,9 @@ module gba_save_sram_backend (
     output reg [31:0] rdata=0,
     output reg ready=0,
     output wire guest_idle,
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    output wire guest_save_written,
+`endif
     input wire host_write, host_read,
     input wire [14:0] host_addr,
     input wire [31:0] host_wdata,
@@ -62,6 +65,11 @@ module gba_save_sram_backend (
     localparam INIT=0, HOST=1, GUEST=2;
     reg [1:0] owner=INIT;
     wire pin_ready, pin_done;
+`ifdef GBK_GAMEPAK_AUTO_WRITEBACK
+    // Report only a completed guest write, in the host clock domain.
+    // Initial fill, cart import and Memory restores use other owners.
+    assign guest_save_written=pin_done && inflight && owner==GUEST && write_2;
+`endif
     wire [31:0] pin_data;
     // Qualify startup with the synchronized PLL reset, independently of the
     // guest reset (which cannot be released until this fill completes).

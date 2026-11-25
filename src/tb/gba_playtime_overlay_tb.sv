@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-module gba_playtime_overlay_tb;
+module gba_playtime_overlay_tb #(parameter bit LOADING=0);
     reg clk=0,reset=1;
     always #5 clk=~clk;
     reg [23:0] rgb_in=24'h28486c;
@@ -8,9 +8,11 @@ module gba_playtime_overlay_tb;
     reg wall_valid=1;
     reg [15:0] wall_hhmm=16'h1234;
     reg [27:0] session_hhmm=28'h0000102,total_hhmm=28'h1230345;
+    reg loading=0,load_failed=0;
+    reg [7:0] load_progress=0;
     wire [23:0] rgb;
     wire de,skip,hs,vs;
-    gba_playtime_overlay overlay(.*);
+    gba_playtime_overlay #(.LOADING(LOADING)) overlay(.*);
     reg [23:0] expected=24'h28486c;
     integer frame_count=0;
     integer preview_file=0;
@@ -44,6 +46,13 @@ module gba_playtime_overlay_tb;
             15:glyph=15'b100_100_111_101_101;
             16:glyph=15'b000_000_111_111_101;
             17:glyph=0;
+            18:glyph=15'b100_100_100_100_111; // L
+            19:glyph=15'b000_000_111_101_111; // o
+            20:glyph=15'b000_110_001_111_111; // a
+            21:glyph=15'b010_000_010_010_010; // i
+            22:glyph=15'b000_000_110_101_101; // n
+            23:glyph=15'b000_111_101_111_001; // g
+            24:glyph=15'b000_000_000_000_010; // .
             default:glyph=15'b000_000_111_000_000; // unavailable clock
         endcase
     endfunction
@@ -97,6 +106,35 @@ module gba_playtime_overlay_tb;
             if(ink)pixel=24'hffffff;else if(edge_pixel)pixel=0;
         end
     endfunction
+    // Loading oracle: black field, "Loading..." at (95,70), and a 128-pixel
+    // bar at x 56..183, y 82..85 filled through progress/2.
+    function automatic [23:0] loading_pixel(input integer x,y,progress,failed);
+        string text_line;
+        integer lx,ly,c,px,py,symbol;
+        reg [14:0] bitmap;
+        reg ink,edge_pixel;
+        begin
+            text_line="Loading...";ink=0;edge_pixel=0;loading_pixel=0;
+            if(y>=82 && y<86 && x>=56 && x<184)
+                loading_pixel=(progress!=0 && x-56<=progress/2) ? (failed ? 24'hff3030 : 24'hffffff) : 24'h404040;
+            lx=x-95;ly=y-70;
+            if(lx>=0 && lx<50 && ly>=0 && ly<7)begin
+                c=lx/5;px=lx%5;py=ly;
+                case(text_line[c])
+                    "L":symbol=18;"o":symbol=19;"a":symbol=20;"d":symbol=14;
+                    "i":symbol=21;"n":symbol=22;"g":symbol=23;default:symbol=24;
+                endcase
+                bitmap=glyph(5'(symbol));
+                for(integer gy=0;gy<5;gy=gy+1)
+                    for(integer gx=0;gx<3;gx=gx+1)
+                        if(bitmap[14-gy*3-gx])begin
+                            if(px==gx+1 && py==gy+1)ink=1;
+                            if(px>=gx && px<=gx+2 && py>=gy && py<=gy+2)edge_pixel=1;
+                        end
+            end
+            if(ink)loading_pixel=24'hffffff;else if(edge_pixel)loading_pixel=0;
+        end
+    endfunction
     task tick;
         @(posedge clk);#1;
         if(reset)begin
@@ -136,12 +174,40 @@ module gba_playtime_overlay_tb;
         if(preview_file)begin $fclose(preview_file);preview_file=0;end
         frame_count=frame_count+1;
     endtask
+    task loading_frame(input integer progress,failed,flags);
+        show=3'(flags);corner=0;loading=1;load_progress=8'(progress);load_failed=1'(failed);
+        expected=rgb_in;vs_in=1;tick();vs_in=0;tick();
+        if(progress==128 && !failed && $value$plusargs("loading_ppm=%s",preview_path))begin
+            preview_file=$fopen(preview_path,"wb");
+            if(!preview_file)$fatal(1,"Cannot create loading preview");
+            $fwrite(preview_file,"P6\n240 160\n255\n");
+        end
+        for(integer yy=0;yy<160;yy=yy+1)begin
+            expected=rgb_in;hs_in=1;tick();hs_in=0;tick();
+            for(integer xx=0;xx<240;xx=xx+1)begin
+                de_in=1;expected=loading_pixel(xx,yy,progress,failed);
+                if((xx+yy)%7==0)begin skip_in=1;tick();tick();skip_in=0;end
+                tick();
+                if(preview_file)$fwrite(preview_file,"%c%c%c",rgb[23:16],rgb[15:8],rgb[7:0]);
+                // Progress and failure must stay frozen until VS.
+                if(xx==120 && yy==80)begin load_progress=~load_progress;load_failed=!load_failed;loading=0;end
+            end
+            expected=rgb_in;de_in=0;tick();tick();
+        end
+        if(preview_file)begin $fclose(preview_file);preview_file=0;end
+        loading=0;load_failed=0;frame_count=frame_count+1;
+    endtask
     initial begin
         repeat(2)tick();reset=0;tick();
+        if(LOADING)begin
+            loading_frame(0,0,0);loading_frame(1,0,7);loading_frame(128,0,0);
+            loading_frame(255,0,3);loading_frame(77,1,0);
+        end
         for(integer valid=0;valid<2;valid=valid+1)
             for(integer pos=0;pos<6;pos=pos+1)
                 for(integer flags=0;flags<8;flags=flags+1)frame(pos,flags,valid);
         reset=1;tick();reset=0;tick();frame(5,4,1);
+
         $display("PASS: %0d exact pixel frames, all 48 enable/position combinations, unavailable clock, held dots, VS snapshots and reset",frame_count);
         $finish;
     end

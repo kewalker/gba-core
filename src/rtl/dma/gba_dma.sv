@@ -5,6 +5,9 @@ module gba_dma (
     input  logic        reset,
 `ifdef GBK_SAVESTATE
     input wire state_request,state_hold,state_write,
+`ifdef GBK_STATE_SERIAL
+    input wire state_shift,state_restore,
+`endif
     input wire [5:0] state_addr,
     input wire [31:0] state_wdata,
     output wire state_quiescent,state_valid,
@@ -62,6 +65,27 @@ module gba_dma (
     assign state_quiescent=!reset && state_draining && state==ST_IDLE && completion_irq==0;
     assign state_valid=state_quiescent && state_frozen && state_addr<34;
     wire [1:0] state_channel=state_addr[4:3];
+`ifdef GBK_STATE_SERIAL
+    // Each saved word is a ring of its own flops (LSB first). The register
+    // sequencer rotates it exactly its width, so a read leaves it unchanged
+    // and a write shifts the image word in. Only bit 0 leaves the block.
+    reg state_bit;
+    always @*begin
+        state_bit=0;
+        if(state_addr<32)case(state_addr[2:0])
+            0:state_bit=source[state_channel][0];
+            1:state_bit=dest[state_channel][0];
+            2:state_bit=programmed_source[state_channel][0];
+            3:state_bit=programmed_dest[state_channel][0];
+            4:state_bit=count[state_channel][0];
+            5:state_bit=reload_count[state_channel][0];
+            default:state_bit=0;
+        endcase
+        else state_bit=state_addr==32 ? pending[0] : channel[0];
+        state_rdata={31'd0,state_valid && state_bit};
+    end
+    wire state_in=state_restore ? state_wdata[0] : state_bit;
+`else
     always @*begin
         state_rdata=0;
         if(state_valid)begin
@@ -78,6 +102,7 @@ module gba_dma (
             else state_rdata={30'd0,channel};
         end
     end
+`endif
 `endif
     wire hit = (cfg_addr[31:8] == 24'h040000) &&
                (cfg_addr[15:0] >= 16'h00B0) && (cfg_addr[15:0] <= 16'h00DF);
@@ -207,6 +232,22 @@ module gba_dma (
             end
 `ifdef GBK_SAVESTATE
         end else if(state_frozen && state_quiescent)begin
+`ifdef GBK_STATE_SERIAL
+            if(state_shift && state_valid)begin
+                if(state_addr<32)case(state_addr[2:0])
+                    0:source[state_channel]<={state_in,source[state_channel][31:1]};
+                    1:dest[state_channel]<={state_in,dest[state_channel][31:1]};
+                    2:programmed_source[state_channel]<={state_in,programmed_source[state_channel][27:1]};
+                    3:programmed_dest[state_channel]<={state_in,programmed_dest[state_channel][27:1]};
+                    4:{control[state_channel],count[state_channel]}<={state_in,control[state_channel],count[state_channel][15:1]};
+                    5:reload_count[state_channel]<={state_in,reload_count[state_channel][15:1]};
+                    default:begin end
+                endcase
+                else if(state_addr==32)
+                    {fifo_remaining[1],fifo_remaining[0],pending}<={state_in,fifo_remaining[1],fifo_remaining[0],pending[3:1]};
+                else channel<={state_in,channel[1]};
+            end
+`else
             if(state_write && state_valid)begin
                 if(state_addr<32)case(state_addr[2:0])
                     0:source[state_channel]<=state_wdata;
@@ -221,6 +262,7 @@ module gba_dma (
                     pending<=state_wdata[3:0];fifo_remaining[0]<=state_wdata[6:4];fifo_remaining[1]<=state_wdata[9:7];
                 end else channel<=state_wdata[1:0];
             end
+`endif
 `endif
         end else begin
             completion_irq <= 0;

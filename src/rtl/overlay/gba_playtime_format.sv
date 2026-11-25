@@ -64,7 +64,9 @@ endmodule
 // single register stage; held/skipped pixels never advance the coordinates.
 // Settings and formatted values must be held in this clock domain. Snapshot
 // them at VS so changing counters/settings cannot tear a displayed frame.
-module gba_playtime_overlay(
+// LOADING builds also draw "Loading..." and a progress bar on black while
+// Play Cartridge copies the cartridge; the bar turns red if the boot fails.
+module gba_playtime_overlay #(parameter bit LOADING=0)(
     input wire clk,reset,
     input wire [23:0] rgb_in,
     input wire de_in,skip_in,hs_in,vs_in,
@@ -73,6 +75,8 @@ module gba_playtime_overlay(
     input wire wall_valid,
     input wire [15:0] wall_hhmm,
     input wire [27:0] session_hhmm,total_hhmm,
+    input wire loading,load_failed, // video clock; used only when LOADING
+    input wire [7:0] load_progress, // 0..255 of the copy
     output wire [23:0] rgb,
     output reg de=0,
     output reg skip=0,
@@ -105,6 +109,13 @@ module gba_playtime_overlay(
             15:glyph=15'b100_100_111_101_101; // h
             16:glyph=15'b000_000_111_111_101; // m
             17:glyph=0; // blank
+            18:glyph=15'b100_100_100_100_111; // L
+            19:glyph=15'b000_000_111_101_111; // o
+            20:glyph=15'b000_110_001_111_111; // a
+            21:glyph=15'b010_000_010_010_010; // i
+            22:glyph=15'b000_000_110_101_101; // n
+            23:glyph=15'b000_111_101_111_001; // g
+            24:glyph=15'b000_000_000_000_010; // .
             default:glyph=15'b000_000_111_000_000; // unavailable clock
         endcase
     endfunction
@@ -122,14 +133,36 @@ module gba_playtime_overlay(
             end
         end
     endfunction
-    (* romstyle="M10K" *) reg [1:0] font_masks[0:2047];
-    initial for(integer n=0;n<2048;n=n+1)font_masks[n]=raster_mask(n[10:6],n[5:3],n[2:0]);
+    function automatic [4:0] loading_symbol(input integer character);
+        case(character)
+            0:loading_symbol=18;1:loading_symbol=19;2:loading_symbol=20;3:loading_symbol=14;
+            4:loading_symbol=21;5:loading_symbol=22;6:loading_symbol=23;default:loading_symbol=24;
+        endcase
+    endfunction
+    // 4096x2 still fills one M10K; release builds keep the 2048-entry ROM.
+    (* romstyle="M10K" *) reg [1:0] font_masks[0:(LOADING ? 4095 : 2047)];
+    initial begin
+        for(integer n=0;n<2048;n=n+1)font_masks[n]=raster_mask(n[10:6],n[5:3],n[2:0]);
+        if(LOADING)for(integer n=0;n<2048;n=n+1)
+            font_masks[2048+n]=n<512 && n%64<50 && n/64<7 ?
+                raster_mask(loading_symbol((n%64)/5),3'((n%64)%5),3'(n/64)) : 2'd0;
+    end
     reg [1:0] pixel_mask=0;
+    reg show_loading=0,loading_failed=0;
+    reg [7:0] progress=0;
+    // "Loading..." is a fixed 50x7 bitmap at (95,70) in the font ROM's upper
+    // half, addressed {row, column}; the playtime text path is untouched.
+    wire in_loading_text=x>=9'd95 && x<9'd145 && y>=9'd70 && y<9'd77;
+    wire [5:0] loading_column=x[5:0]+6'd33; // x-95 mod 64
+    wire [2:0] loading_row=y[2:0]+3'd2; // y-70 mod 8
     reg mask_enabled=0;
     reg [23:0] base_rgb=0;
     // ROM and base pixel capture on the same edge. The output mux retains
     // the existing one-clock RGB/control latency without a second stage.
-    always @(posedge clk)pixel_mask<=font_masks[{ch,column,row}];
+    always @(posedge clk)begin
+        if(LOADING && show_loading)pixel_mask<=font_masks[{3'b100,loading_row,loading_column}];
+        else pixel_mask<=font_masks[{1'b0,ch,column,row}];
+    end
     assign rgb=mask_enabled ? (pixel_mask[1] ? 24'hffffff : pixel_mask[0] ? 24'd0 : base_rgb) : base_rgb;
     wire centred=position==4 || position==5;
     wire bottom=position==2 || position==3 || position==5;
@@ -144,6 +177,11 @@ module gba_playtime_overlay(
     wire [8:0] text_width={4'd0,text_chars}*9'd5;
     wire [8:0] origin_x=centred ? (9'd240-text_width)/2 : position[0] ? 9'd238-text_width : 9'd2;
     wire [8:0] origin_y=bottom ? 9'd158-{4'd0,line_count,3'd0} : 9'd2;
+    // A 128-pixel bar under the text: x 56..183, y 82..85.
+    wire [8:0] bar_x=x-9'd56;
+    wire in_bar=y>=9'd82 && y<9'd86 && bar_x<9'd128;
+    wire bar_filled=progress!=0 && bar_x[6:0]<=progress[7:1];
+    wire [23:0] loading_rgb=!in_bar ? 24'd0 : !bar_filled ? 24'h404040 : loading_failed ? 24'hff3030 : 24'hffffff;
     wire in_area=x>=origin_x && x<origin_x+text_width && y>=origin_y && y<origin_y+9'd24;
     wire [4:0] local_y=5'(y-origin_y);
     wire [1:0] line_number=local_y[4:3];
@@ -196,12 +234,14 @@ module gba_playtime_overlay(
     end
     always @(posedge clk)begin
         if(reset)begin
-            x<=0;y<=0;previous_de<=0;line_count<=0;
+            x<=0;y<=0;previous_de<=0;line_count<=0;show_loading<=0;
             base_rgb<=0;mask_enabled<=0;de<=0;skip<=0;hs<=0;vs<=0;
         end else begin
             de<=de_in;skip<=skip_in;hs<=hs_in;vs<=vs_in;
-            base_rgb<=rgb_in;
-            mask_enabled<=de_in && in_area && row<7 && line_enabled && (source_line!=0 || character<5);
+            // Blanking RGB carries APF scaler commands; recolor active pixels only.
+            base_rgb<=show_loading && de_in ? loading_rgb : rgb_in;
+            mask_enabled<=de_in && (show_loading ? in_loading_text :
+                in_area && row<7 && line_enabled && (source_line!=0 || character<5));
             previous_de<=de_in;
             if(previous_de && !de_in)y<=y+1'b1;
             if(de_in && !skip_in)x<=x+1'b1;
@@ -213,6 +253,8 @@ module gba_playtime_overlay(
                 first_line<=show[0] ? 2'd0 : show[1] ? 2'd1 : 2'd2;
                 second_line<=show[0] && show[1] ? 2'd1 : 2'd2;
                 clock_valid<=wall_valid;wall<=wall_hhmm;session<=session_hhmm;total<=total_hhmm;
+                show_loading<=LOADING && loading;loading_failed<=LOADING && load_failed;
+                progress<=LOADING ? load_progress : 8'd0;
             end
         end
     end

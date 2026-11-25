@@ -13,6 +13,9 @@ module gba_state_machine_access #(
     output wire register_write,
     output wire [15:0] register_addr,
     output wire [31:0] register_wdata,
+`ifdef GBK_STATE_SERIAL
+    output wire [1:0] register_shift,
+`endif
     input wire register_valid,
     input wire [31:0] register_rdata,
     output wire ram_valid,ram_write,ram_response_ready,
@@ -90,6 +93,9 @@ module gba_state_machine_access #(
         .response_ready(destination_reply_ready && !destination_target),
         .request_addr(destination_addr),.request_wdata(destination_data),.request_ready(register_ready),
         .response_valid(register_response),.response_error(register_error),.response_rdata(register_result),
+`ifdef GBK_STATE_SERIAL
+        .register_shift,
+`endif
         .register_addr,.register_wdata,.register_write,.register_valid,.register_rdata);
     assign ram_valid=destination_valid && destination_target;
     assign ram_write=destination_write;
