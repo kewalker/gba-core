@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "identity": "BitBird.GBA",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "release_version": {
-    "version": "0.2.1",
-    "tag": "v0.2.1",
-    "date": "2026-11-20"
+    "version": "0.3.0",
+    "tag": "v0.3.0",
+    "date": "2026-11-27"
   },
-  "image_sha256": "7a976b5e83f0dc719b1f4ee0d9f90becee58203e18bdf7e318e2b3949b0622fe",
+  "image_sha256": "fb9ea2210190d4c3c5102a5a2d7f85a0b9a7a2025d6cf2d55b35c5f3839a3359",
   "timing": {
-    "setup_ns": 0.59,
-    "hold_ns": 0.111,
-    "alms": 17297,
-    "physical_audits": 23
+    "setup_ns": 0.387,
+    "hold_ns": 0.078,
+    "alms": 18133,
+    "physical_audits": 27
   },
-  "scope": "Full-feature public source rebuild with passing timing and 23 physical audits; image identical to the hardware-tested 0.2.1 candidate.",
+  "scope": "Full-feature public source rebuild, including Play Cartridge, with passing timing and 27 physical audits; image identical to the hardware-tested 0.3.0 candidate.",
   "files": [
     {
       "path": "src/fpga/ap_core.qpf",
@@ -673,12 +673,12 @@
     },
     {
       "path": "pocket/manifest.json",
-      "sha256": "479d1290a09583cf5282d4a06e831ef825d77bb93bd9debdf85878224deb1906",
+      "sha256": "4174f1c4b202d69792903291710e1e8108f6ce08cd9a36559540d0563f74e58c",
       "kind": "release-metadata"
     },
     {
       "path": "pocket/README.md",
-      "sha256": "9e3b76f5a2ac725b811916ab11f996c504f21656800244be929129ae7c82c09e",
+      "sha256": "2fe5328c0a90f7654cfc7970335b3068447467d5061c4b8ac377a7dedbba6947",
       "kind": "release-metadata"
     },
     {
@@ -688,22 +688,27 @@
     },
     {
       "path": "pocket/Cores/BitBird.GBA/bitstream.rbf_r",
-      "sha256": "7a976b5e83f0dc719b1f4ee0d9f90becee58203e18bdf7e318e2b3949b0622fe",
+      "sha256": "fb9ea2210190d4c3c5102a5a2d7f85a0b9a7a2025d6cf2d55b35c5f3839a3359",
       "kind": "timing-validated-image"
     },
     {
       "path": "pocket/Cores/BitBird.GBA/core.json",
-      "sha256": "8dad528d56a0a8b8e5fac6e73ccedc0b31d86503265c3d61fb50b93bc6eacaaa",
+      "sha256": "1d83502363959cee2a75b57d75d6b7128fb5e3abe1a2f1b9b69a866c048b181e",
       "kind": "release-metadata"
     },
     {
       "path": "pocket/Cores/BitBird.GBA/data.json",
-      "sha256": "8b74f058a8bf0710ed156d07e0edec86e8e0474507a0753d4d909f4242092a43",
+      "sha256": "66e156e54dd38480fe2b062034c14f4bcfbf65fb6e6aedbe2ce136d7ab0dd7d3",
       "kind": "tested-package"
     },
     {
       "path": "pocket/Cores/BitBird.GBA/icon.bin",
       "sha256": "2086d68e73fabdbe51ac98bdbcf65b85b814ce92ab8718a7927c81e9b3ddc05c",
+      "kind": "tested-package"
+    },
+    {
+      "path": "pocket/Cores/BitBird.GBA/info.txt",
+      "sha256": "d94f4813485f1c3e93e3c109cc54d9f616d9aef04a58c49a36aa0a202d7139f2",
       "kind": "tested-package"
     },
     {
@@ -890,11 +895,16 @@
       "path": "src/rtl/overlay/gba_gamepak_stats_file.sv",
       "sha256": "8ef525cc2ec20afc5dabe54ab6c8994b5bfaf59dc50c7cbf1b95579f1d1eed7b",
       "kind": "qualified-source"
+    },
+    {
+      "path": "docs/build-validation-0.3.0-receipt.json",
+      "sha256": "451f5a912d956939747db09c0af1ee949e4274c535666a53efe3be429e19579e",
+      "kind": "build-validation"
     }
   ],
   "hardware_acceptance": {
     "new_hardware_test": true,
-    "date": "2026-11-20",
-    "scope": "Owner Pocket test of the identical image: The Minish Cap New Game past the opening cutscene, Roll while walking, and a previously working game booting"
+    "date": "2026-11-27",
+    "scope": "Owner Pocket tests of the development candidates: cartridge writeback in FireRed (128 KiB Flash), Golden Sun (64 KiB Flash), Dawn of Souls (SRAM) and The Minish Cap (EEPROM); Memories in cartridge and ROM games; cartridge pulled during play and before a save; power-off shortly after a save; sleep/wake in Dawn of Souls; and, on the identical final image, the Final Fantasy I airship view and the regression games"
   }
 }

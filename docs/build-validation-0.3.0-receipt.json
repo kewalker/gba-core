@@ -1,0 +1,185 @@
+{
+  "status": "PASS",
+  "stages": {
+    "tool-version": {
+      "exit_code": 0,
+      "seconds": 0.34,
+      "log": "tool-version.log"
+    },
+    "map": {
+      "exit_code": 0,
+      "seconds": 196.98,
+      "log": "map.log"
+    },
+    "fit": {
+      "exit_code": 0,
+      "seconds": 648.42,
+      "log": "fit.log"
+    },
+    "sta": {
+      "exit_code": 0,
+      "seconds": 63.59,
+      "log": "sta.log"
+    },
+    "diagnosis": {
+      "exit_code": 0,
+      "seconds": 19.27,
+      "log": "diagnosis.log"
+    },
+    "savestate-crossing": {
+      "exit_code": 0,
+      "seconds": 12.33,
+      "log": "savestate-crossing.log"
+    },
+    "savestate-video": {
+      "exit_code": 0,
+      "seconds": 11.7,
+      "log": "savestate-video.log"
+    },
+    "render-path": {
+      "exit_code": 0,
+      "seconds": 11.47,
+      "log": "render-path.log"
+    },
+    "scanline-crossing": {
+      "exit_code": 0,
+      "seconds": 11.48,
+      "log": "scanline-crossing.log"
+    },
+    "text-coordinate": {
+      "exit_code": 0,
+      "seconds": 11.48,
+      "log": "text-coordinate.log"
+    },
+    "color-effects": {
+      "exit_code": 0,
+      "seconds": 11.5,
+      "log": "color-effects.log"
+    },
+    "fast-clock": {
+      "exit_code": 0,
+      "seconds": 16.11,
+      "log": "fast-clock.log"
+    },
+    "audio-crossing": {
+      "exit_code": 0,
+      "seconds": 11.52,
+      "log": "audio-crossing.log"
+    },
+    "sdram": {
+      "exit_code": 0,
+      "seconds": 19.98,
+      "log": "sdram.log"
+    },
+    "rom-bundle": {
+      "exit_code": 0,
+      "seconds": 12.3,
+      "log": "rom-bundle.log"
+    },
+    "external-save": {
+      "exit_code": 0,
+      "seconds": 12.47,
+      "log": "external-save.log"
+    },
+    "mosaic": {
+      "exit_code": 0,
+      "seconds": 11.62,
+      "log": "mosaic.log"
+    },
+    "playtime": {
+      "exit_code": 0,
+      "seconds": 12.89,
+      "log": "playtime.log"
+    },
+    "stop-resync": {
+      "exit_code": 0,
+      "seconds": 12.08,
+      "log": "stop-resync.log"
+    },
+    "rtc-bundle": {
+      "exit_code": 0,
+      "seconds": 13.31,
+      "log": "rtc-bundle.log"
+    },
+    "rtc-persistence": {
+      "exit_code": 0,
+      "seconds": 16.06,
+      "log": "rtc-persistence.log"
+    },
+    "fast-forward": {
+      "exit_code": 0,
+      "seconds": 12.12,
+      "log": "fast-forward.log"
+    },
+    "cpu-overlap-cone": {
+      "exit_code": 0,
+      "seconds": 12.38,
+      "log": "cpu-overlap-cone.log"
+    },
+    "retained-rom-cone": {
+      "exit_code": 0,
+      "seconds": 12.97,
+      "log": "retained-rom-cone.log"
+    },
+    "validator-stage-cone": {
+      "exit_code": 0,
+      "seconds": 12.53,
+      "log": "validator-stage-cone.log"
+    },
+    "soft-colors": {
+      "exit_code": 0,
+      "seconds": 12.11,
+      "log": "soft-colors.log"
+    },
+    "reset-crossing": {
+      "exit_code": 0,
+      "seconds": 19.08,
+      "log": "reset-crossing.log"
+    },
+    "gamepak-header": {
+      "exit_code": 0,
+      "seconds": 12.84,
+      "log": "gamepak-header.log"
+    },
+    "gamepak-boot-address": {
+      "exit_code": 0,
+      "seconds": 12.17,
+      "log": "gamepak-boot-address.log"
+    },
+    "gamepak-save": {
+      "exit_code": 0,
+      "seconds": 12.33,
+      "log": "gamepak-save.log"
+    },
+    "gamepak-eeprom": {
+      "exit_code": 0,
+      "seconds": 12.02,
+      "log": "gamepak-eeprom.log"
+    },
+    "asm": {
+      "exit_code": 0,
+      "seconds": 15.55,
+      "log": "asm.log"
+    }
+  },
+  "installed": false,
+  "hardware_accepted": false,
+  "release_qualified": false,
+  "scope": "Preserved source compile, fitted timing and physical audits; no new simulation or hardware acceptance",
+  "project_references": 112,
+  "source_files": 161,
+  "build_id_policy": "Preserve the sealed build_id.mif/ver bytes; invoke map/fit/sta directly without timestamp pre-flow regeneration",
+  "source_manifest_sha256": "8e1ca6f36cae713313523916d6cf51e599fa3dab41f2f7d09bfc2a18fe1068a5",
+  "timing_minima_ns": {
+    "Setup": 0.387,
+    "Hold": 0.078,
+    "Recovery": 1.721,
+    "Removal": 0.499,
+    "Minimum Pulse Width": 0.626
+  },
+  "physical_audits": 27,
+  "image_sha256": "fb9ea2210190d4c3c5102a5a2d7f85a0b9a7a2025d6cf2d55b35c5f3839a3359",
+  "image_bytes": 1966444,
+  "equals_preserved_image": false,
+  "image_generated": true
+}

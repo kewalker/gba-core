@@ -50,8 +50,32 @@
         ],
         "size_maximum": 48,
         "address": "0x10000100"
+      },
+      {
+        "name": "Cart Playtime",
+        "id": 4,
+        "required": false,
+        "parameters": 2,
+        "nonvolatile": true,
+        "extensions": [
+          "gbkstat"
+        ],
+        "size_maximum": 48,
+        "address": "0x10000140",
+        "deferload": true
+      },
+      {
+        "name": "Cart Backup",
+        "id": 5,
+        "required": false,
+        "parameters": 2,
+        "extensions": [
+          "sav"
+        ],
+        "size_maximum": 65536,
+        "address": "0x14000000",
+        "deferload": true
       }
     ]
   }
 }
-

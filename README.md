@@ -1,11 +1,11 @@
 # GBA by BitBird
 
 A Game Boy Advance compatible openFPGA core for Analogue Pocket. Version
-**0.2.1**, package identity **BitBird.GBA**, logo **EZ**.
+**0.3.0**, package identity **BitBird.GBA**, logo **EZ**.
 
 ## Features
 
-- **Play Cartridge** (0.3.0, draft): play GBA Game Paks directly, with saves
+- **Play Cartridge**: play GBA Game Paks directly, with saves
   written back to the cartridge automatically and backed up to the SD card.
   See [playing cartridges](docs/installation.md#playing-cartridges).
 - Game saving and RTC persistence.
@@ -35,7 +35,7 @@ have separate persistent settings. Keep ordinary game saves and card backups.
 
 Use Python 3.10+ and Quartus Prime Lite 18.1 with Cyclone V support.
 The [build guide](docs/build.md) covers isolated builds and timing checks.
-The 0.2.1 full-feature build passed fitted timing and all 23 physical audits.
+The 0.3.0 full-feature build passed fitted timing and all 27 physical audits.
 See [validation](docs/build-validation.md) for build and playtest scope.
 
 `python scripts/package-release.py --output build/package-01 --repository-url https://github.com/kewalker/gba-core`

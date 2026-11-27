@@ -5,19 +5,23 @@
   },
   {
     "path": "Cores/BitBird.GBA/bitstream.rbf_r",
-    "sha256": "7a976b5e83f0dc719b1f4ee0d9f90becee58203e18bdf7e318e2b3949b0622fe"
+    "sha256": "fb9ea2210190d4c3c5102a5a2d7f85a0b9a7a2025d6cf2d55b35c5f3839a3359"
   },
   {
     "path": "Cores/BitBird.GBA/core.json",
-    "sha256": "8dad528d56a0a8b8e5fac6e73ccedc0b31d86503265c3d61fb50b93bc6eacaaa"
+    "sha256": "1d83502363959cee2a75b57d75d6b7128fb5e3abe1a2f1b9b69a866c048b181e"
   },
   {
     "path": "Cores/BitBird.GBA/data.json",
-    "sha256": "8b74f058a8bf0710ed156d07e0edec86e8e0474507a0753d4d909f4242092a43"
+    "sha256": "66e156e54dd38480fe2b062034c14f4bcfbf65fb6e6aedbe2ce136d7ab0dd7d3"
   },
   {
     "path": "Cores/BitBird.GBA/icon.bin",
     "sha256": "2086d68e73fabdbe51ac98bdbcf65b85b814ce92ab8718a7927c81e9b3ddc05c"
+  },
+  {
+    "path": "Cores/BitBird.GBA/info.txt",
+    "sha256": "d94f4813485f1c3e93e3c109cc54d9f616d9aef04a58c49a36aa0a202d7139f2"
   },
   {
     "path": "Cores/BitBird.GBA/input.json",
@@ -41,6 +45,6 @@
   },
   {
     "path": "README.md",
-    "sha256": "9e3b76f5a2ac725b811916ab11f996c504f21656800244be929129ae7c82c09e"
+    "sha256": "2fe5328c0a90f7654cfc7970335b3068447467d5061c4b8ac377a7dedbba6947"
   }
 ]

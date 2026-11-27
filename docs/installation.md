@@ -1,4 +1,4 @@
-# Installation and use — GBA by BitBird 0.2.1
+# Installation and use — GBA by BitBird 0.3.0
 
 Install the versioned package from the repository Releases page when available.
 BIOS and game files are not included. You need an Analogue Pocket, an SD card and your own GBA files.
@@ -13,7 +13,7 @@ See [Analogue's OS 2.0 notes](https://www.analogue.co/support/pocket/firmware/2.
 ## Install
 
 1. Back up the card, including Cores, Assets, Saves, Settings and Memories.
-2. Extract `BitBird.GBA_0.2.1.zip` to a temporary directory on your computer.
+2. Extract `BitBird.GBA_0.3.0.zip` to a temporary directory on your computer.
 3. Merge its `Cores`, `Platforms` and `Assets` folders into the card root. Merge
    matching folders; do not replace or erase whole card directories. Keep other
    cores and existing game/save data. The README, source information and license
@@ -48,8 +48,9 @@ Pocket. Open GBA by BitBird and choose **Play Cartridge** in the file browser.
 A "Loading..." bar shows while the game is copied from the cartridge; the GBA
 BIOS logo follows. The BIOS is still needed at `Assets/gba/common/gba_bios.bin`.
 
-The game runs with BitBird's features, including Memories, fast-forward and
-the overlays.
+The game runs with BitBird's features, including Memories, sleep/wake,
+fast-forward and the overlays. After waking from sleep the screen stays black
+for a moment while the game is copied again and restored.
 
 **Saves.** Save in the game as usual. About 10 seconds after the game saves,
 and again before you quit, the core writes the change back to the cartridge,

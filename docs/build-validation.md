@@ -1,3 +1,31 @@
+# 0.3.0 full-feature rebuild
+
+Quartus Prime Lite 18.1 compiled the full-feature public FPGA source, now
+including Play Cartridge, with fitter seed 7. Minimum setup slack was
++0.387 ns and minimum hold slack was +0.078 ns. All 27 physical audits
+passed: the 23 release audits plus the Game Pak header, boot-address, save
+and EEPROM I/O audits. The rebuilt bitstream matches the hardware-tested
+development candidate byte for byte. See the
+[0.3.0 build receipt](build-validation-0.3.0-receipt.json).
+
+Development simulation covered the cartridge profile, header, size probe,
+save detection, writeback, backup ring and unsaved-session fallback paths
+(53 cartridge simulations), the serial Memories sound registers, a state
+load that arrives while the cartridge is still being copied, and mode-2 BG3
+affine references rewritten every scanline. The graphics, affine, Memories
+machine-roundtrip and PPU-resume suites passed with the BG3 change.
+
+On Pocket, the development candidates wrote saves back to Pokémon FireRed
+(128 KiB Flash), Golden Sun (64 KiB Flash), Final Fantasy I & II: Dawn of
+Souls (SRAM) and The Legend of Zelda: The Minish Cap (EEPROM); Memories
+resumed cleanly in cartridge and ROM games; a game kept running after its
+cartridge was pulled, and a save made then went to `<CODE>-unsaved.sav` with
+the cartridge untouched; and powering off shortly after a save loaded the
+previous save without corruption. The final image adds sleep/wake for
+cartridge games: Dawn of Souls resumed after waking, then slept and quit again
+without errors. On the final image, the Final Fantasy I airship view drew
+correctly at normal speed, and the cartridge regression games still worked.
+
 # 0.2.1 full-feature rebuild
 
 Quartus Prime Lite 18.1 compiled the full-feature public FPGA source with

@@ -1,11 +1,11 @@
 # Changelog
 
-## 0.3.0 — unreleased (draft)
+## 0.3.0 — 2026-11-27
 
 Play GBA cartridges directly. Insert a Game Boy Advance Game Pak and choose
 **Play Cartridge** in the Pocket's file browser: the core reads the game from
 the cartridge and plays it with BitBird's features, including Memories,
-fast-forward and the playtime overlays.
+sleep/wake, fast-forward and the playtime overlays.
 
 - **Any cartridge**: the core reads the header, measures the ROM size and
   detects the save type from the cartridge itself, so it needs no game list.
@@ -26,6 +26,10 @@ fast-forward and the playtime overlays.
 Tested with Pokémon FireRed (128 KiB Flash), Golden Sun (64 KiB Flash), Final
 Fantasy I & II: Dawn of Souls (SRAM) and The Legend of Zelda: The Minish Cap
 (EEPROM), including Memories in cartridge games.
+
+Fix perspective views drawn on mode-2 BG3, such as the Final Fantasy I
+airship: the layer now follows positions the game rewrites every scanline,
+as on a GBA, instead of drawing displaced over the scene.
 
 Sound state in Memories is now saved bit-serially, which frees FPGA space;
 Memories from 0.2.x still load. Saves, settings, Memories and playtime/RTC
