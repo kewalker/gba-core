@@ -14,7 +14,7 @@ module gba_playtime_clock_tb;
  always #5 clk=~clk;
  gba_playtime_clock #(.CLOCK_HZ(10)) clock_dut(.clk,.new_game,.playing,.host_toggle,.host_valid,.host_time_bcd,
   .load_total,.loaded_total,.wall_valid,.wall_time_bcd,.session_seconds,.total_seconds);
- gba_playtime_record record(.clk,.new_game,.playing,.game_id,.total_seconds,.load_write,.load_index,.load_data,
+ gba_playtime_record record(.clk,.new_game,.playing,.late_import(1'b0),.game_id,.total_seconds,.load_write,.load_index,.load_data,
   .export_request,.allcomplete,.read_strobe,.read_index,.endian_little,.snapshot_ready,.rtc_snapshot,
   .export_locked,.load_total,.loaded_total,.read_data,.import_valid,
   .identity_write(1'b0),.identity_ready(1'b1),.identity_index(2'd0),.identity_data(32'd0),

@@ -168,7 +168,15 @@ module gba_playtime_host #(parameter integer CLOCK_HZ=74250000, parameter RTC_PE
         assign snapshot_ready=1;assign rtc_snapshot=0;
         assign load_word_read=0;assign load_word_index=0;
     end endgenerate
-    gba_playtime_record #(.RTC_PERSISTENCE(RTC_PERSISTENCE)) stats(.clk,.new_game,.playing,.game_id,.total_seconds,
+    // Only the Play Cartridge sidecar can attach after play has begun: its
+    // open times out across a sleep/wake and APF answers it later.
+    wire late_import=
+`ifdef GBK_GAMEPAK_STATS_FILE
+        gamepak_mode;
+`else
+        1'b0;
+`endif
+    gba_playtime_record #(.RTC_PERSISTENCE(RTC_PERSISTENCE)) stats(.clk,.new_game,.playing,.late_import,.game_id,.total_seconds,
         .load_write(stats_load),.load_index(stats_addr[(RTC_PERSISTENCE?5:4):2]),.load_data(stats_load_data),
         .export_request(stats_export),.allcomplete,
         .read_strobe(bridge_rd && stats_read_address),.read_index(bridge_addr[(RTC_PERSISTENCE?5:4):2]),

@@ -15,6 +15,7 @@ module gba_playtime_clock #(parameter integer CLOCK_HZ=74250000)(
     localparam integer COUNTER_BITS=$clog2(CLOCK_HZ);
     reg [COUNTER_BITS-1:0] wall_phase=0,play_phase=0;
     reg host_seen=0;
+    wire [32:0] merged_total={1'b0,loaded_total}+total_seconds;
     function automatic [7:0] bcd_next(input [7:0] value);
         bcd_next=value[3:0]==9 ? value+7 : value+1'b1;
     endfunction
@@ -41,7 +42,10 @@ module gba_playtime_clock #(parameter integer CLOCK_HZ=74250000)(
         end
         if(new_game)begin session_seconds<=0;total_seconds<=0;play_phase<=0;end
         else begin
-            if(load_total)total_seconds<=loaded_total;
+            // Add rather than replace: an ordinary import arrives before play
+            // (total is still 0), while a Play Cartridge sidecar that arrives
+            // after a wake must keep the time already played since then.
+            if(load_total)total_seconds<=merged_total[32] ? 32'hffffffff : merged_total[31:0];
             if(playing)begin
                 if(play_phase==CLOCK_HZ-1)begin
                     play_phase<=0;
@@ -67,6 +71,9 @@ module gba_playtime_record #(parameter RTC_PERSISTENCE=0)(
     input wire endian_little,
     input wire snapshot_ready,
     input wire [97:0] rtc_snapshot,
+    // Play Cartridge: the identity-checked sidecar may arrive after play has
+    // begun (APF answers its open only after a sleep/wake state load).
+    input wire late_import,
     input wire identity_write,identity_ready,
     input wire [1:0] identity_index,
     input wire [31:0] identity_data,
@@ -109,7 +116,8 @@ module gba_playtime_record #(parameter RTC_PERSISTENCE=0)(
     (* ramstyle="M10K" *) reg [31:0] metadata_words[0:7];
     assign export_busy=RTC_PERSISTENCE && capture_busy;
     wire [3:0] word_index=RTC_PERSISTENCE ? capture_index : {1'b0,read_index};
-    wire import_write=load_write && !playing && !import_closed && !import_valid &&
+    reg import_late=0;
+    wire import_write=load_write && (late_import || (!playing && !import_closed)) && !import_valid &&
         (!RTC_PERSISTENCE || (!capture_busy && !export_locked));
     wire metadata_write=identity_write || (import_write && import_v2 && load_index>=7 && load_index<=10);
     wire [2:0] metadata_write_index=identity_write ? {1'b1,identity_index} : 3'(load_index-7);
@@ -165,11 +173,15 @@ module gba_playtime_record #(parameter RTC_PERSISTENCE=0)(
         end
         if(new_game)begin
             import_closed<=0;import_valid<=0;expected_index<=0;import_ok<=0;import_xor<=0;loaded_total<=0;import_v2<=0;
+            import_late<=0;
             calendar_ok<=0;calendar_present<=0;
         end else begin
             if(playing)import_closed<=1;
             if(import_write)begin
-                if(load_index==0)begin expected_index<=1;import_ok<=load_data==MAGIC && (!RTC_PERSISTENCE || identity_ready);import_xor<=load_data;end
+                if(load_index==0)begin
+                    expected_index<=1;import_ok<=load_data==MAGIC && (!RTC_PERSISTENCE || identity_ready);import_xor<=load_data;
+                    import_late<=playing || import_closed;
+                end
                 else if(load_index==expected_index)begin
                     expected_index<=expected_index+1'b1;import_xor<=next_checksum;
                     case(load_index)
@@ -185,7 +197,9 @@ module gba_playtime_record #(parameter RTC_PERSISTENCE=0)(
                         8:begin calendar_ok<=calendar_ok && time_ok;import_ok<=import_ok && (load_data[31:24]&8'h95)==0;end
                         10:begin calendar_present<=load_data[0];import_ok<=import_ok && load_data[31:2]==0 && (!load_data[0] || calendar_ok);end
                         11:if(import_v2 && import_ok && load_data==import_xor)begin
-                            load_total<=1;import_valid<=1;load_rtc<=calendar_present;
+                            // A late record restores playtime only. After a wake the
+                            // RTC was already restored from the Memory, which is newer.
+                            load_total<=1;import_valid<=1;load_rtc<=calendar_present && !import_late;
                         end
                         default:begin end
                     endcase
