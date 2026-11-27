@@ -237,10 +237,40 @@ module gba_memory_map #(
         assign oam_cpu_rdata=0;assign ppu_oam_read_data=0;
     end endgenerate
     logic [31:0] bios_rdata;
-    logic [27:0] bg2_programmed_x,bg2_programmed_y;
-    // Internal affine references advance by PB/PD each visible scanline.
-    // A register write reloads the current reference, even for the same value.
+    logic [27:0] bg2_programmed_x,bg2_programmed_y,bg3_programmed_x,bg3_programmed_y;
+    // Internal affine references for BG2 and mode-2 BG3. Each advances by
+    // PB/PD at every visible HBlank and reloads from its programmed register
+    // on a BG*X/BG*Y write (even of the same value) and at the frame start.
+    // Per-line DMA or IRQ writes (perspective effects) therefore replace the
+    // reference; the PPU must not add PB/PD times the line number on top.
+    //
+    // A write reloads on the following clock from the programmed register,
+    // which has merged the bytes by then. Each reference is one adder,
+    // (reload ? programmed : reference) + (step ? PB/PD : 0), whose inputs fit
+    // the LUTs ahead of the carry chain; no second byte-merge path. A write
+    // just before an HBlank edge still receives that line's step.
+    //
+    // Memories keep the 194-word image. BG2's references are image words
+    // 24/25; BG3's reload from BG3X/BG3Y as the configuration words restore.
+    logic [3:0] affine_reload=0; // {BG3Y,BG3X,BG2Y,BG2X}
+    wire frame_reference_reload=display_line_end && vcount==227;
+    wire affine_line_step=display_hblank_edge && vcount<160;
+    wire bg2_step=affine_line_step && ppu_dispcnt[2:0]!=0 && ppu_dispcnt[10];
+    wire bg3_step=affine_line_step && ppu_dispcnt[2:0]==2 && ppu_dispcnt[11];
+`ifdef GBK_SAVESTATE
+    wire reference_running=!state_frozen;
+`else
+    wire reference_running=1'b1;
+`endif
+    function automatic [27:0] next_reference(input [27:0] reference,programmed,
+        input [15:0] delta,input reload,step);
+        next_reference=(reload ? programmed : reference)+(step ? {{12{delta[15]}},delta} : 28'd0);
+    endfunction
+    wire [3:0] reference_load=affine_reload|{4{reference_running && frame_reference_reload}};
     always_ff @(posedge clk) begin
+        affine_reload<=reset ? 4'd0 : {4{display_io_write}} & {
+            display_io_addr[15:2]==14'h000f,display_io_addr[15:2]==14'h000e,
+            display_io_addr[15:2]==14'h000b,display_io_addr[15:2]==14'h000a};
         if(reset) begin ppu_bg2x<=0;ppu_bg2y<=0;end
 `ifdef GBK_SAVESTATE
         else if(state_frozen)begin
@@ -249,20 +279,17 @@ module gba_memory_map #(
         end
 `endif
         else begin
-            if(display_line_end) begin
-                if(vcount==227) begin ppu_bg2x<=bg2_programmed_x;ppu_bg2y<=bg2_programmed_y;end
-            end
-            // Increment before HBlank DMA writes the reference for the next
-            // line. Advancing at line end would add PB/PD a second time to
-            // a reference explicitly supplied by a per-line DMA transfer.
-            if(display_hblank_edge && vcount<160 && ppu_dispcnt[2:0]!=0 && ppu_dispcnt[10]) begin
-                ppu_bg2x<=ppu_bg2x+{{12{ppu_bg2pb[15]}},ppu_bg2pb};
-                ppu_bg2y<=ppu_bg2y+{{12{ppu_bg2pd[15]}},ppu_bg2pd};
-            end
-            if(display_io_write && display_io_addr[15:2]==14'h000a)
-                ppu_bg2x<=merge_store({4'd0,bg2_programmed_x},display_io_data,display_io_size,display_io_addr[1:0]);
-            if(display_io_write && display_io_addr[15:2]==14'h000b)
-                ppu_bg2y<=merge_store({4'd0,bg2_programmed_y},display_io_data,display_io_size,display_io_addr[1:0]);
+            if(reference_load[0] || bg2_step)
+                ppu_bg2x<=next_reference(ppu_bg2x,bg2_programmed_x,ppu_bg2pb,reference_load[0],bg2_step);
+            if(reference_load[1] || bg2_step)
+                ppu_bg2y<=next_reference(ppu_bg2y,bg2_programmed_y,ppu_bg2pd,reference_load[1],bg2_step);
+        end
+        if(reset) begin ppu_bg3x<=0;ppu_bg3y<=0;end
+        else begin
+            if(reference_load[2] || (reference_running && bg3_step))
+                ppu_bg3x<=next_reference(ppu_bg3x,bg3_programmed_x,ppu_bg3pb,reference_load[2],reference_running && bg3_step);
+            if(reference_load[3] || (reference_running && bg3_step))
+                ppu_bg3y<=next_reference(ppu_bg3y,bg3_programmed_y,ppu_bg3pd,reference_load[3],reference_running && bg3_step);
         end
     end
     logic [31:0] response_rdata;
@@ -775,8 +802,7 @@ module gba_memory_map #(
             ppu_bg3pb <= 0;
             ppu_bg3pc <= 0;
             ppu_bg3pd <= 0;
-            ppu_bg3x <= 0;
-            ppu_bg3y <= 0;
+            bg3_programmed_x<=0;bg3_programmed_y<=0;
             ppu_win0h <= 0;
             ppu_win1h <= 0;
             ppu_win0v <= 0;
@@ -844,12 +870,12 @@ module gba_memory_map #(
                         ppu_bg3pd <= merge_io16(ppu_bg3pd,io_aligned[31:16],io_byteena[3:2]);
                     end
                     16'h0038: begin
-                        ppu_bg3x[15:0] <= merge_io16(ppu_bg3x[15:0],io_aligned[15:0],io_byteena[1:0]);
-                        ppu_bg3x[27:16] <= merge_io16({4'b0,ppu_bg3x[27:16]},io_aligned[31:16],io_byteena[3:2]);
+                        bg3_programmed_x[15:0] <= merge_io16(bg3_programmed_x[15:0],io_aligned[15:0],io_byteena[1:0]);
+                        bg3_programmed_x[27:16] <= merge_io16({4'b0,bg3_programmed_x[27:16]},io_aligned[31:16],io_byteena[3:2]);
                     end
                     16'h003c: begin
-                        ppu_bg3y[15:0] <= merge_io16(ppu_bg3y[15:0],io_aligned[15:0],io_byteena[1:0]);
-                        ppu_bg3y[27:16] <= merge_io16({4'b0,ppu_bg3y[27:16]},io_aligned[31:16],io_byteena[3:2]);
+                        bg3_programmed_y[15:0] <= merge_io16(bg3_programmed_y[15:0],io_aligned[15:0],io_byteena[1:0]);
+                        bg3_programmed_y[27:16] <= merge_io16({4'b0,bg3_programmed_y[27:16]},io_aligned[31:16],io_byteena[3:2]);
                     end
                     16'h0040: begin
                         ppu_win0h <= merge_io16(ppu_win0h,io_aligned[15:0],io_byteena[1:0]);
@@ -896,8 +922,8 @@ module gba_memory_map #(
                 16'h002c: io_word={4'b0,bg2_programmed_y};
                 16'h0030: io_word={ppu_bg3pb,ppu_bg3pa};
                 16'h0034: io_word={ppu_bg3pd,ppu_bg3pc};
-                16'h0038: io_word={4'b0,ppu_bg3x};
-                16'h003c: io_word={4'b0,ppu_bg3y};
+                16'h0038: io_word={4'b0,bg3_programmed_x};
+                16'h003c: io_word={4'b0,bg3_programmed_y};
                 16'h0040: io_word={ppu_win1h,ppu_win0h};
                 16'h0044: io_word={ppu_win1v,ppu_win0v};
                 16'h0048: io_word={ppu_winout,ppu_winin};

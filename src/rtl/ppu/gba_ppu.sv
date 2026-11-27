@@ -824,16 +824,16 @@ module gba_ppu #(
     wire [15:0] affine_pc=mode==1 ? bg2pc : bg3pc, affine_pd=mode==1 ? bg2pd : bg3pd;
     wire [27:0] affine_refx=mode==1 ? bg2refx : bg3refx, affine_refy=mode==1 ? bg2refy : bg3refy;
     wire [9:0] affine_screen_x=affine_cnt[6] ? mosaic_x : {1'b0,x};
-    // Move the mode-1 sign to the stable matrix coefficient. Negating the
+    // Both modes take the memory map's internal reference, which already
+    // advanced by PB/PD for each line and reloads on BG2X/BG3X writes. Only a
+    // vertical mosaic steps back to the first line of its block.
+    // Move the sign to the stable matrix coefficient. Negating the
     // changing ROM remainder put a carry chain before its unregistered DSP.
     // Seventeen coefficient bits preserve negation of -32768 exactly.
-    wire signed [10:0] affine_line_coordinate=mode==1 ?
-        (affine_cnt[6] ? $signed({7'd0,mosaic_line_remainder}) : 11'sd0) :
-        (affine_cnt[6] ? $signed({1'b0,mosaic_y}) : $signed(11'(y)));
-    wire signed [16:0] affine_vertical_pb=mode==1 ?
-        -$signed({affine_pb[15],affine_pb}) : $signed({affine_pb[15],affine_pb});
-    wire signed [16:0] affine_vertical_pd=mode==1 ?
-        -$signed({affine_pd[15],affine_pd}) : $signed({affine_pd[15],affine_pd});
+    wire signed [10:0] affine_line_coordinate=
+        affine_cnt[6] ? $signed({7'd0,mosaic_line_remainder}) : 11'sd0;
+    wire signed [16:0] affine_vertical_pb=-$signed({affine_pb[15],affine_pb});
+    wire signed [16:0] affine_vertical_pd=-$signed({affine_pd[15],affine_pd});
     // Preserve parallel multiplier outputs. Cascaded multiply-add inference
     // sent a held raster coordinate through two unregistered DSP blocks.
     (* keep = "true" *) wire signed [26:0] affine_x_horizontal =
