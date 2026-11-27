@@ -1,7 +1,7 @@
 # GBA by BitBird
 
 A Game Boy Advance compatible openFPGA core for Analogue Pocket. Version
-**0.3.0**, package identity **BitBird.GBA**, logo **EZ**.
+**0.3.1**, package identity **BitBird.GBA**, logo **EZ**.
 
 ## Features
 
@@ -35,7 +35,7 @@ have separate persistent settings. Keep ordinary game saves and card backups.
 
 Use Python 3.10+ and Quartus Prime Lite 18.1 with Cyclone V support.
 The [build guide](docs/build.md) covers isolated builds and timing checks.
-The 0.3.0 full-feature build passed fitted timing and all 27 physical audits.
+The 0.3.1 full-feature build passed fitted timing and all 27 physical audits.
 See [validation](docs/build-validation.md) for build and playtest scope.
 
 `python scripts/package-release.py --output build/package-01 --repository-url https://github.com/kewalker/gba-core`

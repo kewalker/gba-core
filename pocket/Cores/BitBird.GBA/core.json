@@ -9,7 +9,7 @@
       "description": "BitBird GBA: Game Boy Advance compatible openFPGA core.",
       "author": "BitBird",
       "url": "https://github.com/kewalker/gba-core",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "date_release": "2026-11-27"
     },
     "framework": {

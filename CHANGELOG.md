@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.1 — 2026-11-27
+
+Fix Play Cartridge playtime being lost after sleep/wake. After a wake the
+playtime file arrives only once the game has resumed, and 0.3.0 refused it
+then, so the next quit saved the time played since waking over the total.
+The file is now accepted after the same game and checksum checks, and the
+time played since waking is added to it. ROM games are unchanged.
+
+A total already lost under 0.3.0 cannot be recovered by the core; restore an
+older `<CODE>-<crc>.gbkstat` from a backup if you have one. Saves, settings,
+Memories and sidecars from 0.3.0 carry over unchanged.
+
 ## 0.3.0 — 2026-11-27
 
 Play GBA cartridges directly. Insert a Game Boy Advance Game Pak and choose

@@ -1,4 +1,4 @@
-BitBird GBA 0.3.0
+BitBird GBA 0.3.1
 
 Play ROMs from the SD card, or insert
 a cartridge and choose Play Cartridge.

@@ -1,3 +1,22 @@
+# 0.3.1 full-feature rebuild
+
+Quartus Prime Lite 18.1 compiled the full-feature public FPGA source with
+fitter seed 13. Minimum setup slack was +0.248 ns and minimum hold slack was
++0.082 ns. All 27 physical audits passed. The rebuilt bitstream matches the
+hardware-tested development candidate byte for byte. See the
+[0.3.1 build receipt](build-validation-0.3.1-receipt.json).
+
+The only source change from 0.3.0 is the Play Cartridge playtime record. A
+new simulation follows a wake: the game resumes, its playtime file arrives
+while it plays, the saved total is kept and the time since waking is added,
+and a late file for another game is still refused. The 52 cartridge
+simulations, the RTC, persistence, overlay and data-table stages, the RTC and
+playtime negative controls and the Memories machine roundtrip passed.
+
+On Pocket, Dawn of Souls kept its saved playtime total across sleep/wake on
+the identical image. Under 0.3.0 the same test reset the total to the time
+played since waking.
+
 # 0.3.0 full-feature rebuild
 
 Quartus Prime Lite 18.1 compiled the full-feature public FPGA source, now
